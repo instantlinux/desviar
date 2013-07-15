@@ -1,0 +1,45 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title><%= $title || 'Sinatra App' %></title>
+  <style>
+    body {
+      background-color: #eee;
+      font-family: "Trebuchet MS", verdana, tahoma, arial, sans-serif;
+    }
+    .desviar {
+      margin: 5px;
+    }
+    .desviar textarea, .desviar .sbody {
+      border: 2px dotted #eee;
+      padding: 5px;
+      width: 500px;
+      color: #fff;
+      background-color: #777;
+    }
+    .desviar textarea {
+      padding: 10px;
+    }
+    .desviar input, .desviar .sdate {
+      margin-top: 5px;
+    }
+
+    #content .syntax {
+      background-color: #777;
+      padding: 2px;
+      margin: 5px;
+      margin-left: 1em;
+      margin-bottom: 1em;
+    }
+    #content .syntax .line_number {
+      text-align: right;
+      font-family: monospace;
+      padding-right: 1em;
+      color: #999;
+    }
+  </style>
+</head>
+<body>
+  <%= yield %>
+</body>
+</html>

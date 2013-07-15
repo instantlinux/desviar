@@ -1,0 +1,6 @@
+sinatra --version '> 1.0'
+dm-core
+dm-migrations
+dm-validations
+dm-timestamps
+syntaxi

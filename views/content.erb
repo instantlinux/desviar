@@ -1,0 +1,12 @@
+<div class="desviar">
+  <h2><%= @desviar.temp_uri %></h2>
+  <div class="sbody" id="content">
+     <%= @desviar.formatted_content %>
+  </div>
+  <div class="sdate">
+     Created <%= @desviar.created_at.strftime("%D at %T %Z") %><br>
+     Expires <%= @desviar.expires_at.strftime("%D at %T %Z") %>
+  </div>
+  <br/>
+  <a href="/">Create new temporary URI!</a>
+</div>
