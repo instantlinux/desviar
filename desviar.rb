@@ -28,24 +28,12 @@ class Desviar
   property :updated_at, DateTime
   property :expires_at, DateTime
 
-  # validates_present :notes
-  # validates_length :notes, :minimum => 1
-
   Syntaxi.line_number_method = 'floating'
   Syntaxi.wrap_at_column = 80
-  #Syntaxi.wrap_enabled = false
 
   def formatted_notes
     replacer = Time.now.strftime('[code-%d]')
     html = Syntaxi.new("[code lang='ruby']#{self.notes.gsub('[/code]',
-    replacer)}[/code]").process
-    "<div class=\"syntax syntax_ruby\">#{html.gsub(replacer, 
-    '[/code]')}</div>"
-  end
-
-  def formatted_content
-    replacer = Time.now.strftime('[code-%d]')
-    html = Syntaxi.new("[code lang='ruby']#{self.content.gsub('[/code]',
                        replacer)}[/code]").process
     "<div class=\"syntax syntax_ruby\">#{html.gsub(replacer, '[/code]')}</div>"
   end
@@ -79,13 +67,13 @@ post '/create' do
   if @desviar.save
     redirect "/link/#{@desviar.id}"
   else
-    redirect '/create'
+    error 400
   end
 end
 
 # display content
 get '/desviar/:temp_uri' do
-  @desviar = Desviar.get(params[:temp_uri])
+  @desviar = Desviar.first(:temp_uri => params[:temp_uri])
   if @desviar && DateTime.now < @desviar[:expires_at]
     erb :content
   else

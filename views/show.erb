@@ -1,11 +1,11 @@
 <div class="desviar">
+  <%= @desviar[:temp_uri] %><br><hr>
   <h2><a href="<%= @desviar.redir_uri %>"><%= @desviar.redir_uri %></a></h2>
   <a href="/desviar/<%= @desviar.temp_uri %>">Content</a><br>
-  <div class="sbody" id="content">
+  <div class="sbody" id="box">
      <%= @desviar.formatted_notes %>
   </div>
   <div class="sdate">
-     <%= @desviar[:temp_uri] %><br>
      Created <%= @desviar.created_at.strftime("%D at %T %Z") %><br>
      Expires <%= @desviar.expires_at.strftime("%D at %T %Z") %>
   </div>

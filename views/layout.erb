@@ -23,15 +23,14 @@
     .desviar input, .desviar .sdate {
       margin-top: 5px;
     }
-
-    #content .syntax {
+    #box .syntax {
       background-color: #777;
       padding: 2px;
       margin: 5px;
       margin-left: 1em;
       margin-bottom: 1em;
     }
-    #content .syntax .line_number {
+    #box .syntax .line_number {
       text-align: right;
       font-family: monospace;
       padding-right: 1em;
@@ -39,7 +38,5 @@
     }
   </style>
 </head>
-<body>
-  <%= yield %>
-</body>
+<body><%= yield %></body>
 </html>
