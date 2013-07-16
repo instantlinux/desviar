@@ -1,6 +1,6 @@
 <div class="desviar">
-  <a href="/desviar/<%= @desviar.temp_uri %>">
-  https:<%= settings.bind %>:<%= settings.port %>/desviar/<%= @desviar[:temp_uri] %></a><br><hr>
+  <a href="/desviar/<%= @desviar.temp_uri[0, @desviar.temp_uri.length - URISUFFIX.length] %>">
+  https:<%= settings.bind %>:<%= settings.port %>/desviar/<%= @desviar.temp_uri[0, @desviar.temp_uri.length - URISUFFIX.length] %></a><br><hr>
   <h2><a href="<%= @desviar.redir_uri %>"><%= @desviar.redir_uri %></a></h2>
   <div class="sbody" id="box">
      <%= @desviar.formatted_notes %>

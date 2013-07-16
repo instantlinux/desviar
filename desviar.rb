@@ -13,9 +13,21 @@ require 'net/http'
 
 class Desviar < Sinatra::Base
   $title = 'Desviar'
-  DataMapper.setup(:default, ENV['DATABASE_URL'] || "sqlite::memory:")
-  URIPREFIX = ENV['URIPREFIX'] || 'temp2013'
-  SECRETKEY = ENV['SECRETKEY'] || 'notvery'
+
+  # Parameters - passed by environment variables
+
+  # Prefix is an arbitrary string placed at beginning of URI
+  URIPREFIX  = ENV['URIPREFIX']  || 'temp2013'
+  # Suffix is a hidden string that must be appended to fetch URI
+  URISUFFIX  = ENV['URISUFFIX']  || ''
+  # AuthSecret is used to randomize password hash
+  AUTHSECRET = ENV['AUTHSECRET'] || 'notvery'
+  # Admin PW secures the UI
+  ADMINPW    = ENV['ADMINPW']    || 'password'
+  # DB method - replace with sqlite:///path/file.db to store on disk
+  DBMETHOD   = ENV['DBMETHOD']   || 'sqlite::memory:'
+
+  DataMapper.setup(:default, DBMETHOD)
 
   class Desviar::Data
     include DataMapper::Resource
@@ -57,7 +69,7 @@ class Desviar < Sinatra::Base
     @desviar = Desviar::Data.new(:redir_uri => params[:desviar_redir_uri],
                            :notes  => params[:desviar_notes],
                            :expiration => params[:desviar_expiration])
-    @desviar[:temp_uri] = "#{URIPREFIX}#{SecureRandom.urlsafe_base64(32)}"
+    @desviar[:temp_uri] = "#{URIPREFIX}#{SecureRandom.urlsafe_base64(32)}#{URISUFFIX}"
     @desviar[:expires_at] = Time.now + params[:desviar_expiration].to_i
   
     object = URI.parse(@desviar[:redir_uri])
@@ -95,10 +107,10 @@ class Desviar < Sinatra::Base
 
   def self.new(*)
     app = Rack::Auth::Digest::MD5.new(super) do |username|
-      {'desviar' => 'password'}[username]
+      {'desviar' => ADMINPW}[username]
     end
     app.realm = 'Restricted Area'
-    app.opaque = SECRETKEY
+    app.opaque = AUTHSECRET
     app
   end
 end
