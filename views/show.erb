@@ -1,7 +1,7 @@
 <div class="desviar">
-  <%= @desviar[:temp_uri] %><br><hr>
+  <a href="/desviar/<%= @desviar.temp_uri %>">
+  https:<%= settings.bind %>:<%= settings.port %>/desviar/<%= @desviar[:temp_uri] %></a><br><hr>
   <h2><a href="<%= @desviar.redir_uri %>"><%= @desviar.redir_uri %></a></h2>
-  <a href="/desviar/<%= @desviar.temp_uri %>">Content</a><br>
   <div class="sbody" id="box">
      <%= @desviar.formatted_notes %>
   </div>
@@ -9,6 +9,6 @@
      Created <%= @desviar.created_at.strftime("%D at %T %Z") %><br>
      Expires <%= @desviar.expires_at.strftime("%D at %T %Z") %>
   </div>
-  <br/>
+  <hr>
   <a href="/create">Create new temporary URI!</a>
 </div>

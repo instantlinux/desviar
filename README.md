@@ -12,4 +12,16 @@ Unlike S3, with this tool you can put it behind an iptables/nginx
 configuration to provide whatever ACL restrictions you want, and you
 can reference any source URI (not just those stored on S3).
 
+#### Usage ####
+
+Clone this repo and perform the following:
+
+    sudo apt-get install rack
+    sudo gem install sinatra dm-core dm-migrations dm-validations dm-timestamps syntaxi
+    rackup -p 4567
+
+Default credential is user _desviar_, pw _password_.
+
+#### License ####
+
 Created under Apache license by rich braun, July 2013.
