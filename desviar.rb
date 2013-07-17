@@ -18,9 +18,12 @@ require 'dm-validations'
 require 'dm-timestamps'
 require 'syntaxi'
 require 'net/http'
+require 'test/unit'
+require 'rack/test'
 
 class Desviar < Sinatra::Base
   $title = 'Desviar'
+  $debug = false
 
   # Parameters - passed by environment variables
 
@@ -33,19 +36,21 @@ class Desviar < Sinatra::Base
   # Admin PW secures the UI
   ADMINPW    = ENV['ADMINPW']    || 'password'
   # DB method - replace with sqlite:///path/file.db to store on disk
-  DBMETHOD   = ENV['DBMETHOD']   || 'sqlite::memory:'
-
-  DataMapper.setup(:default, DBMETHOD)
+# DBMETHOD   = ENV['DBMETHOD']   || 'sqlite::memory:'
+    ### TODO: figure out how to maintain a persistent thread for memory DB
+  DBMETHOD   = ENV['DBMETHOD']   || 'sqlite:///dev/shm/desviar'
 
   class Desviar::Data
     include DataMapper::Resource
   
     property :id,         Serial # primary serial key
     property :redir_uri,  String, :required => true, :length => 255
-    property :notes,      Text
     property :temp_uri,   String, :length => 64
     property :expiration, Integer, :required => true
+    property :captcha,    Boolean
+    property :captcha_prompt, Text
     property :content,    Text
+    property :notes,      Text
     property :created_at, DateTime
     property :updated_at, DateTime
     property :expires_at, DateTime
@@ -61,8 +66,12 @@ class Desviar < Sinatra::Base
     end
   end
   
-  DataMapper.auto_upgrade!
-  
+  configure do
+    DataMapper::Logger.new($stdout, :debug) if $debug
+    DataMapper.setup(:default, DBMETHOD)
+    DataMapper.auto_upgrade! if DataMapper.respond_to?(:auto_upgrade!)
+  end
+
   get '/' do
     redirect '/create'
   end
@@ -79,13 +88,22 @@ class Desviar < Sinatra::Base
                            :expiration => params[:desviar_expiration])
     @desviar[:temp_uri] = "#{URIPREFIX}#{SecureRandom.urlsafe_base64(32)}#{URISUFFIX}"
     @desviar[:expires_at] = Time.now + params[:desviar_expiration].to_i
+    @desviar[:captcha] = params[:desviar_captcha]
+    @desviar[:captcha_prompt] = params[:desviar_captchaprompt]
   
+    # Cache the remote URI
     object = URI.parse(@desviar[:redir_uri])
     http = Net::HTTP.new(object.host, object.port)
     http.use_ssl = @desviar[:redir_uri].index('https') == 0
-    response = http.request(Net::HTTP::Get.new(object.request_uri))
+    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    req = Net::HTTP::Get.new(object.request_uri)
+    if params[:desviar_remoteuser] != ''
+      req.basic_auth params[:desviar_remoteuser], params[:desviar_remotepw]
+    end
+    response = http.request(req)
     @desviar[:content] = response.body
   
+    # Insert the new record and display the new link
     if @desviar.save
       redirect "/link/#{@desviar.id}"
     else
@@ -97,7 +115,7 @@ class Desviar < Sinatra::Base
   get '/desviar/:temp_uri' do
     @desviar = Desviar::Data.first(:temp_uri => params[:temp_uri])
     if @desviar && DateTime.now < @desviar[:expires_at]
-      erb :content
+      erb @desviar[:captcha] ? :captcha : content
     else
       error 404
     end
@@ -113,6 +131,26 @@ class Desviar < Sinatra::Base
     end
   end
 
+  # clean out expired records
+  get '/clean' do
+    # TODO: figure out the clean "native" way of DataMapper::Collection.destroy
+    #   - but this works fine for small databases
+    @desviar = DataMapper.repository(:default).adapter
+    @records = Desviar::Data.all(:expires_at.lt => DateTime.now)
+    @records.each do |item|
+      @desviar.execute("DELETE FROM desviar_data WHERE id=#{item.id};")
+    end
+    redirect "/"
+  end
+
+  # list of most recent records
+  get '/list' do
+    @desviar = Desviar::Data.all(:limit => 150, :order => [ :created_at.desc ])
+    @total = @desviar.length
+    @count = [ @total, 150 ].min
+    erb :list
+  end
+
   def self.new(*)
     app = Rack::Auth::Digest::MD5.new(super) do |username|
       {'desviar' => ADMINPW}[username]
@@ -124,4 +162,17 @@ class Desviar < Sinatra::Base
 end
 
 class Public < Desviar
+end
+
+class DesviarTest <Test::Unit::TestCase
+  include Rack::Test::Methods
+
+  def app
+    Desviar
+  end
+
+  def test_list
+    get '/list'
+    assert last_response.ok?
+  end
 end

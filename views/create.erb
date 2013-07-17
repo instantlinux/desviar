@@ -1,8 +1,14 @@
 <div class="desviar">
   <h2>Create a new temporary URI:</h2>
   <form action="/create" method="POST">
-    <p><label for="name">Existing URI: </label><input type="text" name="desviar_redir_uri" /><br>
-    <label for="name">Seconds before Expiration: </label><input type="text" name="desviar_expiration" /></p>
+    <p><label for="uri">Existing URI: </label><input type="text" name="desviar_redir_uri" /><br>
+    <label for="expire">Seconds before Expiration: </label><input type="text" name="desviar_expiration" /><br>
+    <label for="user">Username (if needed): </label><input type="text" name="desviar_remoteuser" /><br>
+    <label for="pass">Password (if needed): </label><input type="password" name="desviar_remotepw" /><br>
+    <label for="captcha">Require CAPTCHA: </label><input type="radio" name="desviar_captcha" value="0" checked/>No
+          <input type="radio" name="desviar_captcha" value="1" />Yes<br>
+    <label for="prompt">CAPTCHA prompt: </label><input type="text" name="desviar_captchaprompt" /></p>
+    Notes:<br>
     <textarea name="desviar_notes" id="desviar_notes" rows="3"></textarea>
     <br/>
     <input type="submit" value="Save"/>

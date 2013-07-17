@@ -6,8 +6,9 @@
      <%= @desviar.formatted_notes %>
   </div>
   <div class="sdate">
-     Created <%= @desviar.created_at.strftime("%D at %T %Z") %><br>
+     Created <%= @desviar.created_at.strftime("%D at %T %Z") %> <%= ENV['REMOTE_USER'] %><br>
      Expires <%= @desviar.expires_at.strftime("%D at %T %Z") %>
+     <%= @desviar.captcha ? "<br>CAPTCHA is required" : "" %>
   </div>
   <hr>
   <a href="/create">Create new temporary URI!</a>

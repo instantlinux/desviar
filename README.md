@@ -21,17 +21,42 @@ troubleshooting, you can store content in a file.
 Clone this repo and perform the following:
 
     sudo apt-get install rack
-    sudo gem install sinatra dm-core dm-migrations dm-validations dm-timestamps syntaxi
-    URIPREFIX=something
-    AUTHSECRET=auniquevalue
-    ADMINPW=mypassword
+    sudo gem install sinatra dm-core dm-migrations dm-validations dm-timestamps syntaxi rack-recaptcha rack-test
+    export URIPREFIX=something
+    export AUTHSECRET=auniquevalue
+    export ADMINPW=mypassword
+    export CAPTCHAPUB=key
+    export CAPTCHAPRIV=key
     rackup -p 4567
 
 Default credential is user _desviar_, pw _password_.
 
 #### Usage ####
 
-TBD
+Commands:
+* /create - generate a new pre-authenticated URI
+* /desviar/xxx - retrieve pre-authenticated content (if a URISUFFIX was specified, it must be appended to xxx)
+* /list   - display a table of most-recently uploaded URIs
+* /link/nnn - retrieve details
+
+Here's an example of creating a new link via _curl_:
+
+    curl --digest --user desviar:password http://localhost:4567/create \
+     --data "desviar_redir_uri=http://localhost/test&desviar_expiration=1800&desviar_captcha=1&desviar_notes=testing"
+
+#### Features implemented ####
+
+- [x] HTTP digest authentication for user interface
+- [ ] Parse htpasswd files to support multiple credentials
+- [ ] Bypass authentication for generated URIs
+- [x] Basic HTTP authentication for remote URIs
+- [ ] HTTP digest authentication for remote URIs
+- [ ] Captcha challenge for generated URIs
+- [x] Listing of database contents
+- [ ] Encrypt database
+- [x] Pre-shared/concealed URI suffix
+- [ ] Activity log output (syslog)
+- [x] Database cleanup tool
 
 #### License ####
 
