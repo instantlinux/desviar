@@ -20,6 +20,7 @@ require 'syntaxi'
 require 'net/http'
 require 'test/unit'
 require 'rack/test'
+require 'rack/recaptcha'
 
 class Desviar < Sinatra::Base
   $title = 'Desviar'
@@ -39,6 +40,9 @@ class Desviar < Sinatra::Base
 # DBMETHOD   = ENV['DBMETHOD']   || 'sqlite::memory:'
     ### TODO: figure out how to maintain a persistent thread for memory DB
   DBMETHOD   = ENV['DBMETHOD']   || 'sqlite:///dev/shm/desviar'
+  # Keys for reCAPTCHA - see http://www.google.com/recaptcha/whyrecaptcha
+  CAPTCHAPUB  = ENV['CAPTCHAPUB']
+  CAPTCHAPRIV = ENV['CAPTCHAPRIV']
 
   class Desviar::Data
     include DataMapper::Resource
@@ -48,7 +52,8 @@ class Desviar < Sinatra::Base
     property :temp_uri,   String, :length => 64
     property :expiration, Integer, :required => true
     property :captcha,    Boolean
-    property :captcha_prompt, Text
+    property :captcha_prompt,    Text
+    property :captcha_validated, Boolean
     property :content,    Text
     property :notes,      Text
     property :created_at, DateTime
@@ -70,6 +75,8 @@ class Desviar < Sinatra::Base
     DataMapper::Logger.new($stdout, :debug) if $debug
     DataMapper.setup(:default, DBMETHOD)
     DataMapper.auto_upgrade! if DataMapper.respond_to?(:auto_upgrade!)
+    use Rack::Recaptcha, :public_key => CAPTCHAPUB, :private_key => CAPTCHAPRIV
+    helpers Rack::Recaptcha::Helpers
   end
 
   get '/' do
@@ -83,14 +90,16 @@ class Desviar < Sinatra::Base
   
   # submit
   post '/create' do
-    @desviar = Desviar::Data.new(:redir_uri => params[:desviar_redir_uri],
-                           :notes  => params[:desviar_notes],
-                           :expiration => params[:desviar_expiration])
-    @desviar[:temp_uri] = "#{URIPREFIX}#{SecureRandom.urlsafe_base64(32)}#{URISUFFIX}"
-    @desviar[:expires_at] = Time.now + params[:desviar_expiration].to_i
-    @desviar[:captcha] = params[:desviar_captcha]
-    @desviar[:captcha_prompt] = params[:desviar_captchaprompt]
-  
+    @desviar = Desviar::Data.new(
+       :redir_uri      => params[:desviar_redir_uri],
+       :notes          => params[:desviar_notes],
+       :expiration     => params[:desviar_expiration],
+       :temp_uri       => "#{URIPREFIX}#{SecureRandom.urlsafe_base64(32)}#{URISUFFIX}",
+       :expires_at     => Time.now + params[:desviar_expiration].to_i,
+       :captcha        => params[:desviar_captcha],
+       :captcha_prompt => params[:desviar_captchaprompt],
+       :captcha_validated => false)
+
     # Cache the remote URI
     object = URI.parse(@desviar[:redir_uri])
     http = Net::HTTP.new(object.host, object.port)
@@ -115,10 +124,29 @@ class Desviar < Sinatra::Base
   get '/desviar/:temp_uri' do
     @desviar = Desviar::Data.first(:temp_uri => params[:temp_uri])
     if @desviar && DateTime.now < @desviar[:expires_at]
-      erb @desviar[:captcha] ? :captcha : content
+      if !@desviar[:captcha]
+        erb :content
+      elsif @desviar[:captcha_validated]
+        @desviar[:captcha_validated] = false
+        @desviar.save
+        erb :content
+      else 
+        @button = 'Proceed'
+        erb :captcha
+      end
     else
       error 404
     end
+  end
+
+  # handle reCAPTCHA
+  post '/desviar/:temp_uri' do
+    if recaptcha_valid?
+      @desviar = Desviar::Data.first(:temp_uri => params[:temp_uri])
+      @desviar[:captcha_validated] = true
+      @desviar.save
+    end
+    redirect "/desviar/#{params[:temp_uri]}"
   end
 
   # show link ID
@@ -140,7 +168,7 @@ class Desviar < Sinatra::Base
     @records.each do |item|
       @desviar.execute("DELETE FROM desviar_data WHERE id=#{item.id};")
     end
-    redirect "/"
+    redirect "/list"
   end
 
   # list of most recent records
@@ -161,9 +189,7 @@ class Desviar < Sinatra::Base
   end
 end
 
-class Public < Desviar
-end
-
+# TODO - switch to MiniTest, move to test subdir
 class DesviarTest <Test::Unit::TestCase
   include Rack::Test::Methods
 

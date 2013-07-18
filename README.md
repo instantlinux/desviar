@@ -51,7 +51,7 @@ Here's an example of creating a new link via _curl_:
 - [ ] Bypass authentication for generated URIs
 - [x] Basic HTTP authentication for remote URIs
 - [ ] HTTP digest authentication for remote URIs
-- [ ] Captcha challenge for generated URIs
+- [x] Captcha challenge for generated URIs
 - [x] Listing of database contents
 - [ ] Encrypt database
 - [x] Pre-shared/concealed URI suffix

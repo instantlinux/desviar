@@ -1,9 +1,8 @@
+<div class="desviar">
 <%= @desviar.captcha_prompt %>
 <hr>
- <script type="text/javascript"
-   src="https://www.google.com/recaptcha/api/challenge?k=<%= CAPTCHAPUB %>"
- </script>
- <noscript>
-   <iframe src="https://www.google.com/recaptcha/api/noscript?k=<%= CAPTCHAPUB %>"
-       height="300" width="500" frameborder="0"></iframe><br>
- </noscript>
+  <form action="/desviar/<%= @desviar.temp_uri %>" method="POST">
+    <%= recaptcha_tag(:challenge) %>
+    <input type="submit" value="<%= @button %>"/>
+  </form>
+</div>
