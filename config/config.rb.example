@@ -1,0 +1,42 @@
+# Configuration values for Desviar
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+
+$config = {
+
+# Page title
+:title => "Desviar",
+
+# Prefix is an arbitrary string placed at beginning of URI
+:uriprefix => "012",
+
+# Suffix is a pre-shared hidden string that must be appended to
+#  fetch URI; leave blank unless you need extra security
+:urisuffix => "",
+
+# Hash length -- if you like TinyURL, try a value of 3 or 4
+:hashlength => 32,
+
+# AuthSalt is used to randomize password hash
+:authsalt => "notveryrandom",
+
+# Admin PW secures the UI
+:adminpw => "password",
+
+# DB method - use sqlite:///path/file.db to store on disk
+# dbmethod => "sqlite::memory:",
+
+    ### TODO => "figure out how to maintain a persistent thread for memory DB
+:dbmethod => "sqlite:///dev/shm/desviar",
+
+# Keys for reCAPTCHA - see http://www.google.com/recaptcha/whyrecaptcha
+:captchapub => "",
+:captchapriv => "",
+
+# Debug mode
+:debug => false
+
+}

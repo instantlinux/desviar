@@ -1,9 +1,9 @@
 <div class="desviar">
 <h2>URI Listing (<%= @count %> of <%= @total %>)</h2>
  <table class="grid">
- <tr><th>id</th><th>created_at</th><th>expires_at</th><th>redir_uri</th></tr>
+ <tr><th>id</th><th>created_at</th><th>expires_at</th><th>redir_uri</th><th>c</th><th>notes</th></tr>
  <% @desviar.each do |item| %>
- <%= "<tr><td><a href=/link/#{item.id}>#{item.id}</a></td><td>#{item.created_at}</td><td>#{item.expires_at}</td><td>#{item.redir_uri}</td>" %>
+ <%= "<tr><td><a href=/link/#{item.id}>#{item.id}</a></td><td>#{item.created_at}</td><td>#{item.expires_at}</td><td>#{item.redir_uri}</td><td>#{'&bull;' if item.captcha}</td><td>#{item.notes[0,50]}</td>" %>
  <% end %>
  </table>
 <p><a href="/create">Create</a> <a href="/clean">Clean</a>

@@ -23,25 +23,7 @@ require 'rack/test'
 require 'rack/recaptcha'
 
 class Desviar < Sinatra::Base
-  $title = 'Desviar'
-  $debug = false
-
   # Parameters - passed by environment variables
-
-  # Prefix is an arbitrary string placed at beginning of URI
-  URIPREFIX  = ENV['URIPREFIX']  || '012'
-  # Suffix is a hidden string that must be appended to fetch URI
-  URISUFFIX  = ENV['URISUFFIX']  || ''
-  # Hash length -- if you like TinyURL, try a value of 3 or 4
-  HASHLENGTH = (ENV['HASHLENGTH'] || 32).to_i
-  # AuthSecret is used to randomize password hash
-  AUTHSECRET = ENV['AUTHSECRET'] || 'notvery'
-  # Admin PW secures the UI
-  ADMINPW    = ENV['ADMINPW']    || 'password'
-  # DB method - replace with sqlite:///path/file.db to store on disk
-# DBMETHOD   = ENV['DBMETHOD']   || 'sqlite::memory:'
-    ### TODO: figure out how to maintain a persistent thread for memory DB
-  DBMETHOD   = ENV['DBMETHOD']   || 'sqlite:///dev/shm/desviar'
 
   class Desviar::Data
     include DataMapper::Resource
@@ -72,8 +54,10 @@ class Desviar < Sinatra::Base
   end
   
   configure do
-    DataMapper::Logger.new($stdout, :debug) if $debug
-    DataMapper.setup(:default, DBMETHOD)
+    require File.expand_path '../config/config.rb', __FILE__
+
+    DataMapper::Logger.new($stdout, :debug) if $config[:debug]
+    DataMapper.setup(:default, $config[:dbmethod])
     DataMapper.auto_upgrade! if DataMapper.respond_to?(:auto_upgrade!)
   end
 
@@ -92,7 +76,7 @@ class Desviar < Sinatra::Base
        :redir_uri      => params[:desviar_redir_uri],
        :notes          => params[:desviar_notes],
        :expiration     => params[:desviar_expiration],
-       :temp_uri       => "#{URIPREFIX}#{SecureRandom.urlsafe_base64(HASHLENGTH)[0,HASHLENGTH]}#{URISUFFIX}",
+       :temp_uri       => "#{$config[:uriprefix]}#{SecureRandom.urlsafe_base64($config[:hashlength])[0,$config[:hashlength]]}#{$config[:urisuffix]}",
        :expires_at     => Time.now + params[:desviar_expiration].to_i,
        :captcha        => params[:desviar_captcha],
        :captcha_prompt => params[:desviar_captchaprompt],
@@ -151,10 +135,10 @@ class Desviar < Sinatra::Base
 
   def self.new(*)
     app = Rack::Auth::Digest::MD5.new(super) do |username|
-      {'desviar' => ADMINPW}[username]
+      {'desviar' => $config[:adminpw]}[username]
     end
     app.realm = 'Restricted Area'
-    app.opaque = AUTHSECRET
+    app.opaque = $config[:authsalt]
     app
   end
 end
@@ -163,12 +147,9 @@ end
 # Class Desviar::Public - routes without auth
 
 class Desviar::Public < Sinatra::Base
-  # Keys for reCAPTCHA - see http://www.google.com/recaptcha/whyrecaptcha
-  CAPTCHAPUB  = ENV['CAPTCHAPUB']
-  CAPTCHAPRIV = ENV['CAPTCHAPRIV']
 
   configure do
-    use Rack::Recaptcha, :public_key => CAPTCHAPUB, :private_key => CAPTCHAPRIV
+    use Rack::Recaptcha, :public_key => $config[:captchapub], :private_key => $config[:captchapriv]
     helpers Rack::Recaptcha::Helpers
   end
 

@@ -19,18 +19,17 @@ troubleshooting, you can store content in a file.
 
 #### Installation ####
 
-Clone this repo and perform the following:
+Clone this repo, copy config/config.rb.example to config/config.rb, and
+perform the following:
 
     sudo apt-get install rack libsqlite3-dev
     #  package names above may differ if not using Ubuntu
     sudo gem install bundler
     sudo bundle install
-    export CAPTCHAPUB=key
-    export CAPTCHAPRIV=key
     # see source code in desviar.rb for additional options
     rackup -p 4567
 
-Default credential is user _desviar_, pw _password_.
+Default credential of [app](http://localhost:4567) is user _desviar_, pw _password_.
 
 #### Usage ####
 

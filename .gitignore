@@ -1,0 +1,5 @@
+*~
+*.out
+*.log
+config.rb
+Gemfile.lock
