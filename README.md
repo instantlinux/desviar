@@ -4,10 +4,10 @@ This is a Ruby-based app server built on Sinatra to create
 preauthorized time-limited, random URIs used in devops deployment
 scripts or in web applications such as confirmation emails.
 
-It operates similarly to the Amazon S3 temporary-URI feature:  provide
-the tool with the URI to an existing secure resource, specify a number
-of seconds you want to authorize references to it, and you'll get back
-a temporary URI good for that amount of time.
+It operates similarly to TinyURL or the Amazon S3 temporary-URI
+feature: provide the tool with the URI to an existing secure resource,
+specify a number of seconds you want to authorize references to it,
+and you'll get back a temporary URI good for that amount of time.
 
 You can set it up on a DMZ network or in the cloud behind an
 iptables/nginx configuration to provide whatever ACL restrictions you
@@ -24,12 +24,10 @@ Clone this repo and perform the following:
     sudo apt-get install rack libsqlite3-dev
     #  package names above may differ if not using Ubuntu
     sudo gem install bundler
-    bundle install
-    export URIPREFIX=something
-    export AUTHSECRET=auniquevalue
-    export ADMINPW=mypassword
+    sudo bundle install
     export CAPTCHAPUB=key
     export CAPTCHAPRIV=key
+    # see source code in desviar.rb for additional options
     rackup -p 4567
 
 Default credential is user _desviar_, pw _password_.
@@ -61,6 +59,7 @@ Here's an example of creating a new link via _curl_:
 - [x] Pre-shared/concealed URI suffix
 - [ ] Activity log output (syslog)
 - [x] Database cleanup tool
+- [x] Tested under Ruby 1.9.3
 
 #### License ####
 

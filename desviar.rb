@@ -29,9 +29,11 @@ class Desviar < Sinatra::Base
   # Parameters - passed by environment variables
 
   # Prefix is an arbitrary string placed at beginning of URI
-  URIPREFIX  = ENV['URIPREFIX']  || 'temp2013'
+  URIPREFIX  = ENV['URIPREFIX']  || '012'
   # Suffix is a hidden string that must be appended to fetch URI
   URISUFFIX  = ENV['URISUFFIX']  || ''
+  # Hash length -- if you like TinyURL, try a value of 3 or 4
+  HASHLENGTH = (ENV['HASHLENGTH'] || 32).to_i
   # AuthSecret is used to randomize password hash
   AUTHSECRET = ENV['AUTHSECRET'] || 'notvery'
   # Admin PW secures the UI
@@ -90,7 +92,7 @@ class Desviar < Sinatra::Base
        :redir_uri      => params[:desviar_redir_uri],
        :notes          => params[:desviar_notes],
        :expiration     => params[:desviar_expiration],
-       :temp_uri       => "#{URIPREFIX}#{SecureRandom.urlsafe_base64(32)}#{URISUFFIX}",
+       :temp_uri       => "#{URIPREFIX}#{SecureRandom.urlsafe_base64(HASHLENGTH)[0,HASHLENGTH]}#{URISUFFIX}",
        :expires_at     => Time.now + params[:desviar_expiration].to_i,
        :captcha        => params[:desviar_captcha],
        :captcha_prompt => params[:desviar_captchaprompt],
