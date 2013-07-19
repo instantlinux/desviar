@@ -1,17 +1,18 @@
 ### Desviar - High-security redirection ###
 
-This is a Ruby tool built on Sinatra to create preauthorized time-limited,
-random URIs used in deployment scripts or in web applications such as
-confirmation emails.
+This is a Ruby-based app server built on Sinatra to create
+preauthorized time-limited, random URIs used in devops deployment
+scripts or in web applications such as confirmation emails.
 
 It operates similarly to the Amazon S3 temporary-URI feature:  provide
 the tool with the URI to an existing secure resource, specify a number
 of seconds you want to authorize references to it, and you'll get back
 a temporary URI good for that amount of time.
 
-Unlike S3, with this tool you can put it behind an iptables/nginx
-configuration to provide whatever ACL restrictions you want, and you
-can reference any source URI (not just those stored on S3).
+You can set it up on a DMZ network or in the cloud behind an
+iptables/nginx configuration to provide whatever ACL restrictions you
+want, and you can reference any source URI (not just those stored on
+S3).
 
 Secure content is cached in memory (sqlite3) by default; for
 troubleshooting, you can store content in a file.
@@ -20,8 +21,10 @@ troubleshooting, you can store content in a file.
 
 Clone this repo and perform the following:
 
-    sudo apt-get install rack
-    sudo gem install sinatra dm-core dm-migrations dm-validations dm-timestamps syntaxi rack-recaptcha rack-test
+    sudo apt-get install rack libsqlite3-dev
+    #  package names above may differ if not using Ubuntu
+    sudo gem install bundler
+    bundle install
     export URIPREFIX=something
     export AUTHSECRET=auniquevalue
     export ADMINPW=mypassword
@@ -48,12 +51,13 @@ Here's an example of creating a new link via _curl_:
 
 - [x] HTTP digest authentication for user interface
 - [ ] Parse htpasswd files to support multiple credentials
-- [ ] Bypass authentication for generated URIs
+- [x] Bypass authentication for generated URIs
 - [x] Basic HTTP authentication for remote URIs
 - [ ] HTTP digest authentication for remote URIs
-- [x] Captcha challenge for generated URIs
+- [x] reCAPTCHA challenge for generated URIs
 - [x] Listing of database contents
 - [ ] Encrypt database
+- [ ] Memcached storage (for performance at scale)
 - [x] Pre-shared/concealed URI suffix
 - [ ] Activity log output (syslog)
 - [x] Database cleanup tool

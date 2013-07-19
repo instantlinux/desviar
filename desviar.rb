@@ -40,9 +40,6 @@ class Desviar < Sinatra::Base
 # DBMETHOD   = ENV['DBMETHOD']   || 'sqlite::memory:'
     ### TODO: figure out how to maintain a persistent thread for memory DB
   DBMETHOD   = ENV['DBMETHOD']   || 'sqlite:///dev/shm/desviar'
-  # Keys for reCAPTCHA - see http://www.google.com/recaptcha/whyrecaptcha
-  CAPTCHAPUB  = ENV['CAPTCHAPUB']
-  CAPTCHAPRIV = ENV['CAPTCHAPRIV']
 
   class Desviar::Data
     include DataMapper::Resource
@@ -53,6 +50,7 @@ class Desviar < Sinatra::Base
     property :expiration, Integer, :required => true
     property :captcha,    Boolean
     property :captcha_prompt,    Text
+    property :captcha_button,    String, :length => 20
     property :captcha_validated, Boolean
     property :content,    Text
     property :notes,      Text
@@ -75,8 +73,6 @@ class Desviar < Sinatra::Base
     DataMapper::Logger.new($stdout, :debug) if $debug
     DataMapper.setup(:default, DBMETHOD)
     DataMapper.auto_upgrade! if DataMapper.respond_to?(:auto_upgrade!)
-    use Rack::Recaptcha, :public_key => CAPTCHAPUB, :private_key => CAPTCHAPRIV
-    helpers Rack::Recaptcha::Helpers
   end
 
   get '/' do
@@ -98,6 +94,7 @@ class Desviar < Sinatra::Base
        :expires_at     => Time.now + params[:desviar_expiration].to_i,
        :captcha        => params[:desviar_captcha],
        :captcha_prompt => params[:desviar_captchaprompt],
+       :captcha_button => params[:desviar_captchabutton],
        :captcha_validated => false)
 
     # Cache the remote URI
@@ -120,35 +117,6 @@ class Desviar < Sinatra::Base
     end
   end
   
-  # display content
-  get '/desviar/:temp_uri' do
-    @desviar = Desviar::Data.first(:temp_uri => params[:temp_uri])
-    if @desviar && DateTime.now < @desviar[:expires_at]
-      if !@desviar[:captcha]
-        erb :content
-      elsif @desviar[:captcha_validated]
-        @desviar[:captcha_validated] = false
-        @desviar.save
-        erb :content
-      else 
-        @button = 'Proceed'
-        erb :captcha
-      end
-    else
-      error 404
-    end
-  end
-
-  # handle reCAPTCHA
-  post '/desviar/:temp_uri' do
-    if recaptcha_valid?
-      @desviar = Desviar::Data.first(:temp_uri => params[:temp_uri])
-      @desviar[:captcha_validated] = true
-      @desviar.save
-    end
-    redirect "/desviar/#{params[:temp_uri]}"
-  end
-
   # show link ID
   get '/link/:id' do
     @desviar = Desviar::Data.get(params[:id])
@@ -186,6 +154,50 @@ class Desviar < Sinatra::Base
     app.realm = 'Restricted Area'
     app.opaque = AUTHSECRET
     app
+  end
+end
+
+#############################################
+# Class Desviar::Public - routes without auth
+
+class Desviar::Public < Sinatra::Base
+  # Keys for reCAPTCHA - see http://www.google.com/recaptcha/whyrecaptcha
+  CAPTCHAPUB  = ENV['CAPTCHAPUB']
+  CAPTCHAPRIV = ENV['CAPTCHAPRIV']
+
+  configure do
+    use Rack::Recaptcha, :public_key => CAPTCHAPUB, :private_key => CAPTCHAPRIV
+    helpers Rack::Recaptcha::Helpers
+  end
+
+  # display content
+  get '/:temp_uri' do
+    @desviar = Desviar::Data.first(:temp_uri => params[:temp_uri])
+    cache_control :public, :max_age => 30
+    if @desviar && DateTime.now < @desviar[:expires_at]
+      if !@desviar[:captcha]
+        erb :content
+      elsif @desviar[:captcha_validated]
+        @desviar[:captcha_validated] = false
+        @desviar.save
+        erb :content
+      else 
+        @button = @desviar[:captcha_button]
+        erb :captcha
+      end
+    else
+      error 404
+    end
+  end
+
+  # handle reCAPTCHA
+  post '/:temp_uri' do
+    if recaptcha_valid?
+      @desviar = Desviar::Data.first(:temp_uri => params[:temp_uri])
+      @desviar[:captcha_validated] = true
+      @desviar.save
+    end
+    redirect "/desviar/#{params[:temp_uri]}"
   end
 end
 

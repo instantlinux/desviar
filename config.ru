@@ -1,10 +1,9 @@
 require File.expand_path '../desviar.rb', __FILE__
-run Desviar
 
-# TODO: get this to bypass auth for /desviar content
-#run Rack::URLMap.new({
-#  "/" => Desviar,
-#  "/link" => Desviar,
-#  "/desviar" => Public,
-#  "/create" => Desviar
-#})
+run Rack::URLMap.new({
+  "/" => Desviar,
+  "/0/link"   => Desviar,
+  "/0/create" => Desviar,
+  "/0/list"   => Desviar,
+  "/desviar"  => Desviar::Public
+})
