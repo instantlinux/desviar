@@ -20,6 +20,9 @@ $config = {
 # Hash length -- if you like TinyURL, try a value of 3 or 4
 :hashlength => 32,
 
+# AuthPrompt appears in the browser authentication dialog
+:authprompt => 'Please Authenticate'
+
 # AuthSalt is used to randomize password hash
 :authsalt => "notveryrandom",
 
@@ -32,9 +35,17 @@ $config = {
     ### TODO => "figure out how to maintain a persistent thread for memory DB
 :dbmethod => "sqlite:///dev/shm/desviar",
 
+# DB encryption - nil, aes-256-cbc (future: AES-128-CFB etc)
+:dbencrypt => nil,
+:cryptkey => "",
+:cryptlen => 256,
+
 # Keys for reCAPTCHA - see http://www.google.com/recaptcha/whyrecaptcha
 :captchapub => "",
 :captchapriv => "",
+
+# Records to display on /list
+:recordsmax => 150,
 
 # Debug mode
 :debug => false

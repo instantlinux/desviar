@@ -26,7 +26,6 @@ perform the following:
     #  package names above may differ if not using Ubuntu
     sudo gem install bundler
     sudo bundle install
-    # see source code in desviar.rb for additional options
     rackup -p 4567
 
 Default credential of [app](http://localhost:4567) is user _desviar_, pw _password_.

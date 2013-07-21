@@ -21,10 +21,10 @@ require 'net/http'
 require 'test/unit'
 require 'rack/test'
 require 'rack/recaptcha'
+require 'digest/sha2'
+require 'base64'
 
 class Desviar < Sinatra::Base
-  # Parameters - passed by environment variables
-
   class Desviar::Data
     include DataMapper::Resource
   
@@ -38,13 +38,16 @@ class Desviar < Sinatra::Base
     property :captcha_validated, Boolean
     property :content,    Text
     property :notes,      Text
+    property :cipher_iv,  Float
+#    property :cipher_iv,  String, :length => 16
+    property :cipher_key, String, :length => 32
     property :created_at, DateTime
     property :updated_at, DateTime
     property :expires_at, DateTime
   
     Syntaxi.line_number_method = 'floating'
     Syntaxi.wrap_at_column = 80
-  
+
     def formatted_notes
       replacer = Time.now.strftime('[code-%d]')
       html = Syntaxi.new("[code lang='ruby']#{self.notes.gsub('[/code]',
@@ -93,7 +96,20 @@ class Desviar < Sinatra::Base
       req.basic_auth params[:desviar_remoteuser], params[:desviar_remotepw]
     end
     response = http.request(req)
-    @desviar[:content] = response.body
+    if $config[:dbencrypt].nil?
+      @desviar[:content] = response.body
+    else
+      @desviar[:cipher_iv] = rand
+#      sha2    = Digest::SHA2.new($config[:cryptlen])
+      enc     = OpenSSL::Cipher.new($config[:dbencrypt])
+      enc.encrypt
+#      enc.key = sha2.digest($config[:cryptkey])
+  @desviar[:cipher_key] = enc.random_key
+  enc.key = @desviar[:cipher_key]
+      enc.iv  = @desviar[:cipher_iv].to_s
+# TODO: read the entire input, not just the first line of text
+      @desviar[:content] = enc.update(Base64.encode64(response.body)) + enc.final
+    end
   
     # Insert the new record and display the new link
     if @desviar.save
@@ -127,9 +143,9 @@ class Desviar < Sinatra::Base
 
   # list of most recent records
   get '/list' do
-    @desviar = Desviar::Data.all(:limit => 150, :order => [ :created_at.desc ])
+    @desviar = Desviar::Data.all(:limit => $config[:recordsmax], :order => [ :created_at.desc ])
     @total = @desviar.length
-    @count = [ @total, 150 ].min
+    @count = [ @total, $config[:recordsmax] ].min
     erb :list
   end
 
@@ -137,7 +153,7 @@ class Desviar < Sinatra::Base
     app = Rack::Auth::Digest::MD5.new(super) do |username|
       {'desviar' => $config[:adminpw]}[username]
     end
-    app.realm = 'Restricted Area'
+    app.realm  = $config[:authprompt]
     app.opaque = $config[:authsalt]
     app
   end
@@ -158,6 +174,17 @@ class Desviar::Public < Sinatra::Base
     @desviar = Desviar::Data.first(:temp_uri => params[:temp_uri])
     cache_control :public, :max_age => 30
     if @desviar && DateTime.now < @desviar[:expires_at]
+      if $config[:dbencrypt].nil?
+        @content = @desviar[:content]
+      else
+#        sha2     = Digest::SHA2.new($config[:cryptlen])
+        enc      = OpenSSL::Cipher.new($config[:dbencrypt])
+        enc.decrypt
+#        enc.key  = sha2.digest($config[:cryptkey])
+  enc.key = @desviar[:cipher_key]
+        enc.iv   = @desviar[:cipher_iv].to_s
+        @content = Base64.decode64(enc.update(@desviar[:content]) + enc.final)
+      end
       if !@desviar[:captcha]
         erb :content
       elsif @desviar[:captcha_validated]
