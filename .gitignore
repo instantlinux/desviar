@@ -1,5 +1,6 @@
 *~
 *.out
 *.log
-config.rb
+config.yml
 Gemfile.lock
+config.rb

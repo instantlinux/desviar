@@ -35,7 +35,7 @@ $config = {
     ### TODO => "figure out how to maintain a persistent thread for memory DB
 :dbmethod => "sqlite:///dev/shm/desviar",
 
-# DB encryption - nil, aes-256-cbc (future: AES-128-CFB etc)
+# DB encryption - nil, aes-256-cfb (future: AES-128-CFB etc); 32-byte key
 :dbencrypt => nil,
 :cryptkey => "",
 :cryptlen => 256,

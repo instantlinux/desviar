@@ -2,7 +2,7 @@
 #
 # Created 14 Jul 2013
 #
-# Copyright 2013 Richard Braun
+#   Copyright 2013 Richard Braun
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -21,41 +21,16 @@ require 'net/http'
 require 'test/unit'
 require 'rack/test'
 require 'rack/recaptcha'
-require 'digest/sha2'
-require 'base64'
+# require 'webrick/httpauth/htpasswd'
 
 class Desviar < Sinatra::Base
-  class Desviar::Data
-    include DataMapper::Resource
-  
-    property :id,         Serial # primary serial key
-    property :redir_uri,  String, :required => true, :length => 255
-    property :temp_uri,   String, :length => 64
-    property :expiration, Integer, :required => true
-    property :captcha,    Boolean
-    property :captcha_prompt,    Text
-    property :captcha_button,    String, :length => 20
-    property :captcha_validated, Boolean
-    property :content,    Text
-    property :notes,      Text
-    property :cipher_iv,  Float
-#    property :cipher_iv,  String, :length => 16
-    property :cipher_key, String, :length => 32
-    property :created_at, DateTime
-    property :updated_at, DateTime
-    property :expires_at, DateTime
-  
-    Syntaxi.line_number_method = 'floating'
-    Syntaxi.wrap_at_column = 80
 
-    def formatted_notes
-      replacer = Time.now.strftime('[code-%d]')
-      html = Syntaxi.new("[code lang='ruby']#{self.notes.gsub('[/code]',
-                         replacer)}[/code]").process
-      "<div class=\"syntax syntax_ruby\">#{html.gsub(replacer, '[/code]')}</div>"
-    end
-  end
-  
+  require File.expand_path '../lib/model.rb', __FILE__
+  require File.expand_path '../lib/encrypt.rb', __FILE__
+
+# Auth parsing is work-in-progress
+#  require File.expand_path '../lib/auth.rb', __FILE__
+
   configure do
     require File.expand_path '../config/config.rb', __FILE__
 
@@ -99,16 +74,10 @@ class Desviar < Sinatra::Base
     if $config[:dbencrypt].nil?
       @desviar[:content] = response.body
     else
-      @desviar[:cipher_iv] = rand
-#      sha2    = Digest::SHA2.new($config[:cryptlen])
-      enc     = OpenSSL::Cipher.new($config[:dbencrypt])
-      enc.encrypt
-#      enc.key = sha2.digest($config[:cryptkey])
-  @desviar[:cipher_key] = enc.random_key
-  enc.key = @desviar[:cipher_key]
-      enc.iv  = @desviar[:cipher_iv].to_s
-# TODO: read the entire input, not just the first line of text
-      @desviar[:content] = enc.update(Base64.encode64(response.body)) + enc.final
+      obj = Desviar::EncryptedItem::Encryptor.new(response.body, $config[:cryptkey])
+      @desviar[:content] = obj.encrypted_data
+      @desviar[:hmac] = obj.hmac
+      @desviar[:cipher_iv] = obj.iv
     end
   
     # Insert the new record and display the new link
@@ -177,13 +146,16 @@ class Desviar::Public < Sinatra::Base
       if $config[:dbencrypt].nil?
         @content = @desviar[:content]
       else
-#        sha2     = Digest::SHA2.new($config[:cryptlen])
-        enc      = OpenSSL::Cipher.new($config[:dbencrypt])
-        enc.decrypt
-#        enc.key  = sha2.digest($config[:cryptkey])
-  enc.key = @desviar[:cipher_key]
-        enc.iv   = @desviar[:cipher_iv].to_s
-        @content = Base64.decode64(enc.update(@desviar[:content]) + enc.final)
+        obj = Desviar::EncryptedItem::Decryptor::for({
+            'cipher'         => $config[:dbencrypt], 
+            'version'        => 2, 
+            'encrypted_data' => @desviar[:content],
+            'iv'             => Base64.encode64(@desviar[:cipher_iv]),
+            'hmac'           => @desviar[:hmac]}, $config[:cryptkey])
+        puts "hmac=#{@desviar[:hmac]}\n"
+        puts "iv=#{@desviar[:cipher_iv]}\n"
+        @content = obj.decrypted_data
+
       end
       if !@desviar[:captcha]
         erb :content
@@ -218,7 +190,7 @@ class DesviarTest <Test::Unit::TestCase
   def app
     Desviar
   end
-
+ 
   def test_list
     get '/list'
     assert last_response.ok?

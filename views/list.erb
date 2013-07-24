@@ -3,7 +3,7 @@
  <table class="grid">
  <tr><th>id</th><th>created_at</th><th>expires_at</th><th>redir_uri</th><th>c</th><th>size</th><th>notes</th></tr>
  <% @desviar.each do |item| %>
- <%= "<tr><td><a href=/link/#{item.id}>#{item.id}</a></td><td>#{item.created_at}</td><td>#{item.expires_at}</td><td>#{item.redir_uri}</td><td>#{'&bull;' if item.captcha}</td><td>#{item.content.bytesize}</td><td>#{item.notes[0,50]}#{item.cipher_iv}</td>" %>
+ <%= "<tr><td><a href=/link/#{item.id}>#{item.id}</a></td><td>#{item.created_at}</td><td>#{item.expires_at}</td><td>#{item.redir_uri}</td><td>#{'&bull;' if item.captcha}</td><td>#{item.content.bytesize}</td><td>#{item.notes[0,50]}#{item.cipher_iv}:#{item.hmac}</td>" %>
  <% end %>
  </table>
 <p><a href="/create">Create</a> <a href="/clean">Clean</a>
