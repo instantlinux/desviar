@@ -21,7 +21,7 @@ $config = {
 :hashlength => 32,
 
 # AuthPrompt appears in the browser authentication dialog
-:authprompt => 'Please Authenticate'
+:authprompt => "Please Authenticate",
 
 # AuthSalt is used to randomize password hash
 :authsalt => "notveryrandom",
@@ -46,6 +46,9 @@ $config = {
 
 # Records to display on /list
 :recordsmax => 150,
+
+# Syslog facility - false to disable
+:log_facility => Syslog::LOG_LOCAL0,
 
 # Debug mode
 :debug => false

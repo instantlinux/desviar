@@ -17,6 +17,7 @@ require 'dm-migrations'
 require 'dm-validations'
 require 'dm-timestamps'
 require 'syntaxi'
+require 'syslog'
 require 'net/http'
 require 'test/unit'
 require 'rack/test'
@@ -82,6 +83,7 @@ class Desviar < Sinatra::Base
   
     # Insert the new record and display the new link
     if @desviar.save
+      log "Created #{@desviar.id} #{@desviar.redir_uri} #{@desviar.expires_at}"
       redirect "/link/#{@desviar.id}"
     else
       error 400
@@ -104,9 +106,12 @@ class Desviar < Sinatra::Base
     #   - but this works fine for small databases
     @desviar = DataMapper.repository(:default).adapter
     @records = Desviar::Data.all(:expires_at.lt => DateTime.now)
+    count = 0
     @records.each do |item|
       @desviar.execute("DELETE FROM desviar_data WHERE id=#{item.id};")
+      count += 1
     end
+    log "Cleaned #{count} records" if count != 0
     redirect "/list"
   end
 
@@ -126,6 +131,13 @@ class Desviar < Sinatra::Base
     app.opaque = $config[:authsalt]
     app
   end
+
+  def log(message, priority = Syslog::LOG_INFO)
+    if $config[:log_facility]    
+      Syslog.open($0, Syslog::LOG_PID | Syslog::LOG_CONS | $config[:log_facility]) { |obj| obj.info message }
+    end
+  end
+
 end
 
 #############################################
@@ -152,20 +164,24 @@ class Desviar::Public < Sinatra::Base
             'encrypted_data' => @desviar[:content],
             'iv'             => Base64.encode64(@desviar[:cipher_iv]),
             'hmac'           => @desviar[:hmac]}, $config[:cryptkey])
+=begin
         puts "hmac=#{@desviar[:hmac]}\n"
-        puts "iv=#{@desviar[:cipher_iv]}\n"
-        @content = obj.decrypted_data
+        puts "iv=#{Base64.encode64(@desviar[:cipher_iv])}\n"
+=end
+#        @content = obj.decrypted_data
+        @content = obj.for_decrypted_item
 
       end
-      if !@desviar[:captcha]
-        erb :content
-      elsif @desviar[:captcha_validated]
-        @desviar[:captcha_validated] = false
-        @desviar.save
-        erb :content
-      else 
+      if @desviar[:captcha] && !@desviar[:captcha_validated]
         @button = @desviar[:captcha_button]
         erb :captcha
+      else
+        if @desviar[:captcha_validated]
+          @desviar[:captcha_validated] = false
+          @desviar.save
+        end
+#       log "Fetched #{@desviar.id} #{@desviar.redir_uri} #{@desviar.content.bytesize} #{@desviar.notes[0,50]}"
+        erb :content, :layout => false
       end
     else
       error 404

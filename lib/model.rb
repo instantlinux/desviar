@@ -21,8 +21,9 @@ class Desviar::Data
   property :captcha_validated, Boolean
   property :content,    Text
   property :notes,      Text
-  property :cipher_iv,  String, :length => 16
+  property :cipher_iv,  String, :length => 32 #TODO shorten
   property :hmac,       String, :length => 46
+  property :owner,      String, :length => 16
   property :created_at, DateTime
   property :updated_at, DateTime
   property :expires_at, DateTime
