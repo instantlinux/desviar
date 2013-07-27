@@ -1,4 +1,4 @@
-# Data model for Desviar
+# Data model for Desviar main object
 #
 #   Copyright 2013 Richard Braun
 #
@@ -19,9 +19,9 @@ class Desviar::Data
   property :captcha_prompt,    Text
   property :captcha_button,    String, :length => 20
   property :captcha_validated, Boolean
-  property :content,    Text
+  property :content,    Text,  :length => $config[:contentmax]
   property :notes,      Text
-  property :cipher_iv,  String, :length => 32 #TODO shorten
+  property :cipher_iv,  Binary, :length => 16
   property :hmac,       String, :length => 46
   property :owner,      String, :length => 16
   property :created_at, DateTime

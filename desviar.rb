@@ -26,6 +26,7 @@ require 'rack/recaptcha'
 
 class Desviar < Sinatra::Base
 
+  require File.expand_path '../config/config.rb', __FILE__
   require File.expand_path '../lib/model.rb', __FILE__
   require File.expand_path '../lib/encrypt.rb', __FILE__
 
@@ -33,11 +34,10 @@ class Desviar < Sinatra::Base
 #  require File.expand_path '../lib/auth.rb', __FILE__
 
   configure do
-    require File.expand_path '../config/config.rb', __FILE__
-
     DataMapper::Logger.new($stdout, :debug) if $config[:debug]
     DataMapper.setup(:default, $config[:dbmethod])
     DataMapper.auto_upgrade! if DataMapper.respond_to?(:auto_upgrade!)
+    $config[:cryptkey] = SecureRandom.base64(32) if $config[:cryptkey].nil?
   end
 
   get '/' do
@@ -46,21 +46,19 @@ class Desviar < Sinatra::Base
   
   # create
   get '/create' do
+    puts request.env.inspect if $config[:debug]
     erb :create
   end
   
   # submit
   post '/create' do
-    @desviar = Desviar::Data.new(
-       :redir_uri      => params[:desviar_redir_uri],
-       :notes          => params[:desviar_notes],
-       :expiration     => params[:desviar_expiration],
-       :temp_uri       => "#{$config[:uriprefix]}#{SecureRandom.urlsafe_base64($config[:hashlength])[0,$config[:hashlength]]}#{$config[:urisuffix]}",
-       :expires_at     => Time.now + params[:desviar_expiration].to_i,
-       :captcha        => params[:desviar_captcha],
-       :captcha_prompt => params[:desviar_captchaprompt],
-       :captcha_button => params[:desviar_captchabutton],
-       :captcha_validated => false)
+    # Create a new data record, generating the random URI and omitting
+    #   remote-access credentials if specified.
+    @desviar = Desviar::Data.new(params.merge({
+      :temp_uri => "#{$config[:uriprefix]}#{SecureRandom.urlsafe_base64($config[:hashlength])[0,$config[:hashlength]]}#{$config[:urisuffix]}",
+      :expires_at     => Time.now + params[:expiration].to_i,
+      :captcha_validated => false
+    }).delete_if {|key, val| key == "remoteuser" || key == "remotepw"})
 
     # Cache the remote URI
     object = URI.parse(@desviar[:redir_uri])
@@ -68,22 +66,23 @@ class Desviar < Sinatra::Base
     http.use_ssl = @desviar[:redir_uri].index('https') == 0
     http.verify_mode = OpenSSL::SSL::VERIFY_NONE
     req = Net::HTTP::Get.new(object.request_uri)
-    if params[:desviar_remoteuser] != ''
-      req.basic_auth params[:desviar_remoteuser], params[:desviar_remotepw]
+    if params[:remoteuser] != ''
+      req.basic_auth params[:remoteuser], params[:remotepw]
     end
     response = http.request(req)
-    if $config[:dbencrypt].nil?
-      @desviar[:content] = response.body
+    if !$config[:dbencrypt]
+      @desviar[:content] = response.body[0, $config[:contentmax]]
     else
-      obj = Desviar::EncryptedItem::Encryptor.new(response.body, $config[:cryptkey])
-      @desviar[:content] = obj.encrypted_data
-      @desviar[:hmac] = obj.hmac
+      obj = Desviar::EncryptedItem::Encryptor.new(
+                response.body[0, $config[:contentmax]], $config[:cryptkey])
+      @desviar[:content]   = obj.encrypted_data
+      @desviar[:hmac]      = obj.hmac
       @desviar[:cipher_iv] = obj.iv
     end
-  
+
     # Insert the new record and display the new link
     if @desviar.save
-      log "Created #{@desviar.id} #{@desviar.redir_uri} #{@desviar.expires_at}"
+      log "Created #{@desviar.id} #{@desviar.redir_uri} #{@desviar.expires_at} #{request.ip}"
       redirect "/link/#{@desviar.id}"
     else
       error 400
@@ -123,9 +122,37 @@ class Desviar < Sinatra::Base
     erb :list
   end
 
+  # configuration
+  get '/config' do
+    erb :config
+  end
+
+  # submit
+  post '/config' do
+    params['config'].each do |opt, val|
+      if $config[opt.to_sym].class == Fixnum
+        $config[opt.to_sym] = val.to_i
+      elsif val != "" || !$config[:hashed].include?(opt)
+        $config[opt.to_sym] = case val
+          when "true" then true
+          when "false" then false
+          when "nil" then nil
+          else val
+          end
+      end
+    end
+
+    DataMapper::Logger.new($stdout, :debug) if $config[:debug]
+    $config[:cryptkey] = SecureRandom.base64(32) if $config[:cryptkey].nil?
+
+    puts $config.inspect if $config[:debug]
+    log "Configuration updated"
+    redirect "/list"
+  end
+
   def self.new(*)
     app = Rack::Auth::Digest::MD5.new(super) do |username|
-      {'desviar' => $config[:adminpw]}[username]
+      {$config[:adminuser] => $config[:adminpw]}[username]
     end
     app.realm  = $config[:authprompt]
     app.opaque = $config[:authsalt]
@@ -136,6 +163,7 @@ class Desviar < Sinatra::Base
     if $config[:log_facility]    
       Syslog.open($0, Syslog::LOG_PID | Syslog::LOG_CONS | $config[:log_facility]) { |obj| obj.info message }
     end
+    puts "#{Time.now} #{message}" if $config[:debug]
   end
 
 end
@@ -155,7 +183,7 @@ class Desviar::Public < Sinatra::Base
     @desviar = Desviar::Data.first(:temp_uri => params[:temp_uri])
     cache_control :public, :max_age => 30
     if @desviar && DateTime.now < @desviar[:expires_at]
-      if $config[:dbencrypt].nil?
+      if !$config[:dbencrypt]
         @content = @desviar[:content]
       else
         obj = Desviar::EncryptedItem::Decryptor::for({
@@ -164,22 +192,16 @@ class Desviar::Public < Sinatra::Base
             'encrypted_data' => @desviar[:content],
             'iv'             => Base64.encode64(@desviar[:cipher_iv]),
             'hmac'           => @desviar[:hmac]}, $config[:cryptkey])
-=begin
-        puts "hmac=#{@desviar[:hmac]}\n"
-        puts "iv=#{Base64.encode64(@desviar[:cipher_iv])}\n"
-=end
-#        @content = obj.decrypted_data
         @content = obj.for_decrypted_item
-
       end
       if @desviar[:captcha] && !@desviar[:captcha_validated]
         @button = @desviar[:captcha_button]
         erb :captcha
       else
         if @desviar[:captcha_validated]
-          @desviar[:captcha_validated] = false
-          @desviar.save
+          @desviar.update(:captcha_validated => false)
         end
+# TODO
 #       log "Fetched #{@desviar.id} #{@desviar.redir_uri} #{@desviar.content.bytesize} #{@desviar.notes[0,50]}"
         erb :content, :layout => false
       end
@@ -191,9 +213,9 @@ class Desviar::Public < Sinatra::Base
   # handle reCAPTCHA
   post '/:temp_uri' do
     if recaptcha_valid?
-      @desviar = Desviar::Data.first(:temp_uri => params[:temp_uri])
-      @desviar[:captcha_validated] = true
-      @desviar.save
+      @desviar = Desviar::Data.first(:temp_uri => params[:temp_uri],
+                                     :fields => [ :id, :temp_uri, :captcha_validated ])
+      @desviar.update(:captcha_validated => true)
     end
     redirect "/desviar/#{params[:temp_uri]}"
   end

@@ -1,0 +1,41 @@
+<div class="desviar">
+  <h2>Run-time configuration</h2>
+  <hr>
+  <form action="/config" method="POST">
+    <p>
+<%=
+   values = $config.select { |key, val| !$config[:hidden].include?(key.to_s) &&
+       key.to_s.index('msg_') != 0 }
+   html = ""
+   values.each do |key, val|
+     html << "<label for='#{key}'>#{key}: </label>"
+     if $config.has_key?("msg_#{key.to_s}".to_sym)
+       helptext = "title='#{$config["msg_#{key.to_s}".to_sym]}' "
+     else
+       helptext = ""
+     end
+     if $optvals.include?(key)
+       html << "<select name='config[#{key}]' #{helptext}>"
+       $optvals[key].each do |opt, text|
+          sel = " selected='selected'" if val.to_s == opt.to_s
+          html << "<option value='#{opt.to_s}'#{sel}>#{opt.to_s}</option>"
+       end
+       html << "</select>"
+     else
+       html << "<input name='config[#{key}]' #{helptext}"
+       if $config[:hashed].include?(key.to_s)
+         html << " type='password'"
+       else
+         html << " value='#{val}' type='text' "
+       end
+       html << "/>"
+     end
+     html << "<br>"
+   end
+   html
+%>
+    <input type="submit" value="Save"/>
+  </form>
+  <hr>
+  <i><font size=-1>Note: changes will persist only until next restart</font><i>
+</div>

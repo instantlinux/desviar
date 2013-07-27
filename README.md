@@ -52,7 +52,8 @@ Here's an example of creating a new link via _curl_:
 - [ ] HTTP digest authentication for remote URIs
 - [x] reCAPTCHA challenge for generated URIs
 - [x] Listing of database contents
-- [x] Encrypt database
+- [x] Choice of static or dynamic (REST) configuration
+- [x] Encrypted database
 - [ ] Memcached storage (for performance at scale)
 - [x] Pre-shared/concealed URI suffix
 - [ ] Activity log output (syslog)

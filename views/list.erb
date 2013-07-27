@@ -6,6 +6,6 @@
  <%= "<tr><td><a href=/link/#{item.id}>#{item.id}</a></td><td>#{item.created_at}</td><td>#{item.expires_at}</td><td>#{item.redir_uri}</td><td>#{'&bull;' if item.captcha}</td><td>#{item.content.bytesize}</td><td>#{item.notes[0,50]}</td>" %>
  <% end %>
  </table>
-<p><a href="/create">Create</a> <a href="/clean">Clean</a>
+<p><a href="/create">Create</a> <a href="/config">Config</a> <a href="/clean">Clean</a>
 <hr>
 </div>

@@ -1,4 +1,7 @@
 # Configuration values for Desviar
+#
+# Created 14 Jul 2013 by rich braun
+#
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
 #   You may obtain a copy of the License at
@@ -7,50 +10,80 @@
 
 $config = {
 
-# Page title
+    :msg_title => "Page title for all generated HTML output",
 :title => "Desviar",
 
-# Prefix is an arbitrary string placed at beginning of URI
+    :msg_uriprefix => "Prefix is an arbitrary string placed at beginning of URI",
 :uriprefix => "012",
 
-# Suffix is a pre-shared hidden string that must be appended to
-#  fetch URI; leave blank unless you need extra security
+    :msg_urisuffix => "Suffix is a pre-shared hidden string that must be appended to fetch URI; leave blank unless you need extra security",
 :urisuffix => "",
 
-# Hash length -- if you like TinyURL, try a value of 3 or 4
+    :msg_hashlength => "Length of generated URL; if you like TinyURL, try a value of 3 or 4",
 :hashlength => 32,
 
-# AuthPrompt appears in the browser authentication dialog
+    :msg_exp => "Default expiration interval, in seconds",
+:exp => 900,
+
+    :msg_authprompt => "AuthPrompt appears in the browser authentication dialog",
 :authprompt => "Please Authenticate",
 
-# AuthSalt is used to randomize password hash
-:authsalt => "notveryrandom",
+    :msg_adminuser => "Administrative username - has access to all records",
+:adminuser => "desviar",
 
-# Admin PW secures the UI
+    :msg_adminpw => "Admin PW secures the UI",
 :adminpw => "password",
 
-# DB method - use sqlite:///path/file.db to store on disk
-# dbmethod => "sqlite::memory:",
+    :msg_authsalt => "AuthSalt is used to randomize http-digest hash",
+:authsalt => "notveryrandom",
 
-    ### TODO => "figure out how to maintain a persistent thread for memory DB
+    :msg_dbmethod => "DB method - sqlite path name; use sqlite:///path/file.db to store on disk",
 :dbmethod => "sqlite:///dev/shm/desviar",
 
-# DB encryption - nil, aes-256-cfb (future: AES-128-CFB etc); 32-byte key
-:dbencrypt => nil,
-:cryptkey => "",
-:cryptlen => 256,
+    ### TODO: figure out how to maintain a persistent thread for memory DB
+    # dbmethod => "sqlite::memory:",
 
-# Keys for reCAPTCHA - see http://www.google.com/recaptcha/whyrecaptcha
+    :msg_dbencrypt => "Method for encrypting local database, see optvals for list of values",
+:dbencrypt => "aes-256-cbc",
+
+    :msg_cryptkey => "32-byte encryption key, or nil to generate random one at startup",
+:cryptkey => nil,
+
+    :msg_captchapub => "Public key for reCAPTCHA - see http://www.google.com/recaptcha/whyrecaptcha",
 :captchapub => "",
+    :msg_captchapriv => "Private key for reCAPTCHA",
 :captchapriv => "",
 
-# Records to display on /list
+    :msg_recordsmax => "Records to display on /list",
 :recordsmax => 150,
 
-# Syslog facility - false to disable
-:log_facility => Syslog::LOG_LOCAL0,
+    :msg_contentmax => "Max content size to cache",
+:contentmax => 4194304,
 
-# Debug mode
+    :msg_log_facility => "Syslog facility - false to disable",
+:log_facility => Syslog::LOG_LOCAL1,
+
+    # Hidden config items concealed from UI/API
+:hidden => [ "hidden", "hashed" ],
+
+    # Hashed config items - secure passwords
+:hashed => [ "authsalt", "adminpw", "cryptkey", "captchapriv" ],
+
+    :msg_debug => "Debug mode",
 :debug => false
+}
 
+# Option values for drop-down selections
+
+$optvals = {
+:dbencrypt => [ false, "aes-256-cbc" ],
+:debug => [ true, false ],
+:log_facility => [
+    Syslog::LOG_LOCAL0,
+    Syslog::LOG_LOCAL1,
+    Syslog::LOG_LOCAL2,
+    Syslog::LOG_LOCAL3
+    ],
+:hashlength => [ 3, 4, 6, 8, 12, 24, 32, 48, 64 ],
+:recordsmax => [ 50, 100, 150, 250, 500 ]
 }
