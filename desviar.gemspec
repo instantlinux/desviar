@@ -1,4 +1,4 @@
-require './desviar'
+require 'desviar'
 
 Gem::Specification.new do |spec|
   spec.platform          = Gem::Platform::RUBY
@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.version           = Desviar::VERSION
   spec.date              = Desviar::RELEASE
 # spec.test_files        = spec.files.select{ |path| path =~ /^test\/.*/ }
-  spec.require_paths     = ["config", "lib", "public", "views"]
+  spec.require_paths     = ["config", "lib"]
   spec.files             = %x[git ls-files].split.reject do |out|
     out =~ %r{^\.} || out =~ %r{/^doc/api/} || out =~ %r{^Gemfile}
   end
