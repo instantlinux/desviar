@@ -26,13 +26,13 @@ require 'rack/recaptcha'
 if ENV['DESVIAR_CONFIG']
   require ENV['DESVIAR_CONFIG']
 else
-  require File.expand_path '../config/config', __FILE__
+  require File.expand_path '../../config/config', __FILE__
 end
-require File.expand_path '../lib/version', __FILE__
-require File.expand_path '../lib/encrypt', __FILE__
-require File.expand_path '../lib/model', __FILE__
+require File.expand_path '../version', __FILE__
+require File.expand_path '../encrypt', __FILE__
+require File.expand_path '../model', __FILE__
 # Auth parsing is work-in-progress
-# require File.expand_path '../lib/auth.rb'', __FILE__
+# require File.expand_path '../auth', __FILE__
 
 module Desviar
   class Authorized < Sinatra::Base

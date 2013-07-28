@@ -19,14 +19,16 @@ troubleshooting, you can store content in a file.
 
 #### Installation ####
 
+These directions have been tested on Ubuntu 12.10 and OpenSUSE 12.3.
+
 ##### From github #####
-Clone this repo, copy _config/config.rb.example_ to config/config.rb, and
-perform the following:
+Clone this repo, cd into its top-level directory, and perform the following:
 
     sudo apt-get install rack make libsqlite3-dev
     #  package names above may differ if not using Ubuntu
     sudo gem install bundler
     sudo bundle install
+    cp config/config.rb.example config/config.rb
     rackup -p 4567
 
 Default credential of [app](http://localhost:4567) is user _desviar_, pw _password_.  Consider moving the default database location from /dev/shm/desviar, and set its permissions to 0600.
@@ -34,9 +36,12 @@ Default credential of [app](http://localhost:4567) is user _desviar_, pw _passwo
 ##### From rubygems.org #####
 Invoke the following:
 
-    sudo apt-get install make libsqlite3-dev
+    sudo apt-get install make libsqlite3-dev ruby-dev
     gem install desviar
     wget https://raw.github.com/instantlinux/desviar/master/config.ru
+    wget https://raw.github.com/instantlinux/desviar/master/config/config.rb.example
+    cp config.rb.example config.rb
+    export DESVIAR_CONFIG=`pwd`/config.rb
     rackup -p 4567
 
 You can modify config.ru to direct log output to a different file.
