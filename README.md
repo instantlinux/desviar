@@ -22,31 +22,32 @@ troubleshooting, you can store content in a file.
 These directions have been tested on Ubuntu 12.10 and OpenSUSE 12.3.
 
 ##### From github #####
-Clone this repo, cd into its top-level directory, and perform the following:
+Clone this repo and perform the following:
 
-    sudo apt-get install rack make libsqlite3-dev
+    git clone https://github.com/instantlinux/desviar.git
+    cd desviar
+    cp config/config.rb.example config/config.rb
+    sudo apt-get install -y make libsqlite3-dev ruby-dev
     #  package names above may differ if not using Ubuntu
     sudo gem install bundler
     sudo bundle install
-    cp config/config.rb.example config/config.rb
+    export RUBYLIB=`pwd`/lib
     rackup -p 4567
-
-Default credential of [app](http://localhost:4567) is user _desviar_, pw _password_.  Consider moving the default database location from /dev/shm/desviar, and set its permissions to 0600.
 
 ##### From rubygems.org #####
 Invoke the following:
 
-    sudo apt-get install make libsqlite3-dev ruby-dev
-    gem install desviar
+    sudo apt-get install -y make libsqlite3-dev ruby-dev
+    sudo gem install desviar
     wget https://raw.github.com/instantlinux/desviar/master/config.ru
     wget https://raw.github.com/instantlinux/desviar/master/config/config.rb.example
     cp config.rb.example config.rb
     export DESVIAR_CONFIG=`pwd`/config.rb
     rackup -p 4567
 
-You can modify config.ru to direct log output to a different file.
-
 #### Usage ####
+
+Default credential of [app](http://localhost:4567) is user _desviar_, pw _password_.  
 
 Commands:
 * /create - generate a new pre-authenticated URI
@@ -58,7 +59,12 @@ Commands:
 Here's an example of creating a new link via _curl_:
 
     curl --digest --user desviar:password http://localhost:4567/create \
-     --data "desviar_redir_uri=http://localhost/test&desviar_expiration=1800&desviar_captcha=1&desviar_notes=testing"
+     --data "redir_uri=http://localhost/test&expiration=1800&captcha=1&notes=testing"
+
+Security notes:
+Consider moving the default database location from /dev/shm/desviar, and set its permissions to 0600.
+
+You can modify config.ru to direct log output to a different file.
 
 #### Features implemented ####
 
