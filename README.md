@@ -19,16 +19,27 @@ troubleshooting, you can store content in a file.
 
 #### Installation ####
 
-Clone this repo, copy config/config.rb.example to config/config.rb, and
+##### From github #####
+Clone this repo, copy _config/config.rb.example_ to config/config.rb, and
 perform the following:
 
-    sudo apt-get install rack libsqlite3-dev
+    sudo apt-get install rack make libsqlite3-dev
     #  package names above may differ if not using Ubuntu
     sudo gem install bundler
     sudo bundle install
     rackup -p 4567
 
-Default credential of [app](http://localhost:4567) is user _desviar_, pw _password_.
+Default credential of [app](http://localhost:4567) is user _desviar_, pw _password_.  Consider moving the default database location from /dev/shm/desviar, and set its permissions to 0600.
+
+##### From rubygems.org #####
+Invoke the following:
+
+    sudo apt-get install make libsqlite3-dev
+    gem install desviar
+    wget https://raw.github.com/instantlinux/desviar/master/config.ru
+    rackup -p 4567
+
+You can modify config.ru to direct log output to a different file.
 
 #### Usage ####
 
@@ -37,6 +48,7 @@ Commands:
 * /desviar/xxx - retrieve pre-authenticated content (if a URISUFFIX was specified, it must be appended to xxx)
 * /list   - display a table of most-recently uploaded URIs
 * /link/nnn - retrieve details
+* /config - set runtime configuration
 
 Here's an example of creating a new link via _curl_:
 
@@ -56,7 +68,7 @@ Here's an example of creating a new link via _curl_:
 - [x] Encrypted database
 - [ ] Memcached storage (for performance at scale)
 - [x] Pre-shared/concealed URI suffix
-- [ ] Activity log output (syslog)
+- [x] Activity log output (syslog)
 - [x] Database cleanup tool
 - [x] Tested under Ruby 1.9.3
 

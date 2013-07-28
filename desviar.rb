@@ -23,12 +23,16 @@ require 'net/http'
 require 'rack/test'
 require 'rack/recaptcha'
 
-require './config/config'
-require './lib/version'
-require './lib/encrypt'
-require './lib/model'
+if ENV['DESVIAR_CONFIG']
+  require ENV['DESVIAR_CONFIG']
+else
+  require File.expand_path '../config/config', __FILE__
+end
+require File.expand_path '../lib/version', __FILE__
+require File.expand_path '../lib/encrypt', __FILE__
+require File.expand_path '../lib/model', __FILE__
 # Auth parsing is work-in-progress
-# require './lib/auth.rb'
+# require File.expand_path '../lib/auth.rb'', __FILE__
 
 module Desviar
   class Authorized < Sinatra::Base
@@ -104,11 +108,12 @@ module Desviar
       # TODO: figure out the clean "native" way of DataMapper::Collection.destroy
       #   - but this works fine for small databases
       @desviar = DataMapper.repository(:default).adapter
-      @records = Desviar::Model::Main.all(:expires_at.lt => DateTime.now)
-      count = 0
+      @records = Desviar::Model::Main.all(:expires_at.lt => DateTime.now,
+                                          :fields => [ :id ])
+      Desviar::Public::log "debug cleanup found #{@records.length}"
+      count = @records.length
       @records.each do |item|
-        @desviar.execute("DELETE FROM desviar_data WHERE id=#{item.id};")
-        count += 1
+        @desviar.execute("DELETE FROM desviar_model_mains WHERE id=#{item.id};")
       end
       Desviar::Public::log "Cleaned #{count} records" if count != 0
       redirect "/list"
