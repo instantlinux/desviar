@@ -1,7 +1,7 @@
 *~
-*.out
+*.gem
 *.log
-config.yml
+*.out
 Gemfile.lock
 config.rb
 desviar.log

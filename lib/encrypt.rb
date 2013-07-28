@@ -47,7 +47,8 @@ require 'open-uri'
 # provides no protection of data bag items from actors with access to
 # such nodes in the infrastructure.
 #
-class Desviar::EncryptedItem
+module Desviar
+ class EncryptedItem
   ALGORITHM = 'aes-256-cbc'
 
   class UnacceptableEncryptedDataBagItemFormat < StandardError
@@ -382,7 +383,6 @@ class Desviar::EncryptedItem
     end
   end
 
-=begin
   def self.load(data_bag, name, secret = nil)
     raw_hash = Chef::DataBagItem.load(data_bag, name)
     secret = secret || self.load_secret
@@ -412,6 +412,6 @@ class Desviar::EncryptedItem
     end
     secret
   end
-=end
 
+ end
 end
