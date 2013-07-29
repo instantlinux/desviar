@@ -11,6 +11,7 @@
 #       http://www.apache.org/licenses/LICENSE-2.0
 
 require 'sinatra/base'
+require 'sinatra/json'
 require 'securerandom'
 require 'dm-core'
 require 'dm-migrations'
@@ -22,6 +23,7 @@ require 'net/http'
 #require 'test/unit'
 require 'rack/test'
 require 'rack/recaptcha'
+require 'multi_json'
 
 if ENV['DESVIAR_CONFIG']
   require ENV['DESVIAR_CONFIG']
@@ -42,6 +44,7 @@ module Desviar
       DataMapper.setup(:default, $config[:dbmethod])
       DataMapper.auto_upgrade! if DataMapper.respond_to?(:auto_upgrade!)
       $config[:cryptkey] = SecureRandom.base64(32) if $config[:cryptkey].nil?
+      helpers Sinatra::JSON
     end
 
     get '/' do
@@ -56,23 +59,23 @@ module Desviar
   
     # submit
     post '/create' do
+      error 400 if params[:redir_uri].strip == ""
+
       # Create a new data record, generating the random URI and omitting
       #   remote-access credentials if specified.
       @desviar = Desviar::Model::Main.new(params.merge({
         :temp_uri => "#{$config[:uriprefix]}#{SecureRandom.urlsafe_base64($config[:hashlength])[0,$config[:hashlength]]}#{$config[:urisuffix]}",
         :expires_at     => Time.now + params[:expiration].to_i,
         :captcha_validated => false
-      }).delete_if {|key, val| key == "remoteuser" || key == "remotepw"})
+      }).delete_if {|key, val| key == "redir_uri" || key == "remoteuser" || key == "remotepw"})
 
       # Cache the remote URI
-      object = URI.parse(@desviar[:redir_uri])
+      object = URI.parse(params[:redir_uri])
       http = Net::HTTP.new(object.host, object.port)
-      http.use_ssl = @desviar[:redir_uri].index('https') == 0
+      http.use_ssl = params[:redir_uri].index('https') == 0
       http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       req = Net::HTTP::Get.new(object.request_uri)
-      if params[:remoteuser] != ''
-        req.basic_auth params[:remoteuser], params[:remotepw]
-      end
+      req.basic_auth params[:remoteuser], params[:remotepw] if params[:remoteuser] != ''
       response = http.request(req)
       if !$config[:dbencrypt]
         @desviar[:content] = response.body[0, $config[:contentmax]]
@@ -83,6 +86,8 @@ module Desviar
         @desviar[:hmac]      = obj.hmac
         @desviar[:cipher_iv] = obj.iv
       end
+
+      @desviar[:redir_uri] = $config[:redir_retain] == "keep" ? params[:redir_uri] : ""
 
       # Insert the new record and display the new link
       if @desviar.save
@@ -98,6 +103,16 @@ module Desviar
       @desviar = Desviar::Model::Main.get(params[:id])
       if @desviar && DateTime.now < @desviar[:expires_at]
         erb :show
+      else
+        error 404
+      end
+    end
+
+    # show link info - json format
+    get '/link/json/:id' do
+      @desviar = Desviar::Model::Main.get(params[:id])
+      if @desviar && DateTime.now < @desviar[:expires_at]
+        json @desviar.attributes.delete_if {|key, val| key == :content || key == :cipher_iv || key == :hmac}
       else
         error 404
       end
@@ -121,15 +136,46 @@ module Desviar
 
     # list of most recent records
     get '/list' do
-      @desviar = Desviar::Model::Main.all(:limit => $config[:recordsmax], :order => [ :created_at.desc ])
+      @desviar = Desviar::Model::Main.all(
+         :limit => $config[:recordsmax],
+         :order => [ :created_at.desc ],
+         :fields => [ :id, :created_at, :expires_at, :redir_uri, :captcha, :notes ])
       @total = @desviar.length
       @count = [ @total, $config[:recordsmax] ].min
       erb :list
     end
 
+    # list - json
+    get '/list/json' do
+      @desviar = Desviar::Model::Main.all(
+         :limit => $config[:recordsmax],
+         :order => [ :created_at.desc ],
+         :fields => [ :id, :redir_uri, :temp_uri, :expiration, :captcha,
+                      :notes, :owner, :created_at, :expires_at ])
+      list = Array.new
+      @desviar.each do |item|
+        list << {
+          :id => item.id, :redir_uri => item.redir_uri,
+          :temp_uri => item.temp_uri, :expiration => item.expiration,
+          :captcha => item.captcha, :notes => item.notes,
+          :owner => item.owner, :created_at => item.created_at,
+          :expires_at => item.expires_at }
+      end
+      json list
+    end
+
     # configuration
     get '/config' do
       erb :config
+    end
+
+    # configuration - json
+    get '/config/json' do
+      json $config.reject { |opt, val| 
+          opt.to_s.index('msg_') == 0 ||
+          $config[:hidden].include?(opt.to_s) ||
+          $config[:hashed].include?(opt.to_s)
+      }
     end
 
     # submit

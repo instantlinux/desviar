@@ -56,6 +56,8 @@ Commands:
 * /link/nnn - retrieve details
 * /config - set runtime configuration
 
+For scripting, the list, link and config commands can be modified with a _/json_ suffix (e.g. _/config/json_) to generate json instead of html output.
+
 Here's an example of creating a new link via _curl_:
 
     curl --digest --user desviar:password http://localhost:4567/create \

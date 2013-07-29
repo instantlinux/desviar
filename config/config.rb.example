@@ -25,6 +25,9 @@ $config = {
     :msg_exp => "Default expiration interval, in seconds",
 :exp => 900,
 
+    :msg_redir_retain => "Retention policy for URI - discard before saving db entry to be more secure",
+:redir_retain => "keep",
+
     :msg_authprompt => "AuthPrompt appears in the browser authentication dialog",
 :authprompt => "Please Authenticate",
 
@@ -85,5 +88,6 @@ $optvals = {
     Syslog::LOG_LOCAL3
     ],
 :hashlength => [ 3, 4, 6, 8, 12, 24, 32, 48, 64 ],
-:recordsmax => [ 50, 100, 150, 250, 500 ]
+:recordsmax => [ 50, 100, 150, 250, 500 ],
+:redir_retain => [ "keep", "discard" ]
 }

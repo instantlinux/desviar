@@ -14,7 +14,7 @@ module Desviar
     include DataMapper::Resource
   
     property :id,         Serial # primary serial key
-    property :redir_uri,  String, :required => true, :length => 255
+    property :redir_uri,  String, :length => 255
     property :temp_uri,   String, :length => 64
     property :expiration, Integer, :required => true
     property :captcha,    Boolean
