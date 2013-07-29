@@ -1,5 +1,5 @@
 module Desviar
-  VERSION = "0.0.15"
+  VERSION = "0.0.16"
   RELEASE = "2013-07-30"
   TIMESTAMP = "2013-07-29 08:27:33 -07:00"
 

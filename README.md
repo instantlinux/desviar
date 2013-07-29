@@ -2,7 +2,12 @@
 
 This is a Ruby-based app server built on Sinatra to create
 preauthorized time-limited, random URIs used in devops deployment
-scripts or in web applications such as confirmation emails.
+scripts or in web applications such as confirmation emails.  Your
+scenario is that you have a database, repository or webserver
+(possibly behind a firewall) that needs to stay both hidden and
+secure, but you need to provide a means for a script to invoke an API
+call or for a remote user to click a direct link to fetch a specific
+item from its hidden source without presenting credentials.
 
 It operates similarly to TinyURL or the Amazon S3 temporary-URI
 feature: provide the tool with the URI to an existing secure resource,
@@ -12,10 +17,11 @@ and you'll get back a temporary URI good for that amount of time.
 You can set it up on a DMZ network or in the cloud behind an
 iptables/nginx configuration to provide whatever ACL restrictions you
 want, and you can reference any source URI (not just those stored on
-S3).
+S3 or an equivalent service).
 
-Secure content is cached in memory (sqlite3) by default; for
-troubleshooting, you can store content in a file.
+Secure content is encrypted and cached in memory (sqlite3) by default;
+for troubleshooting, you can store content in a file and/or turn off
+encryption.
 
 #### Installation ####
 
@@ -35,7 +41,7 @@ Clone this repo and perform the following:
     rackup -p 4567
 
 ##### From rubygems.org #####
-Invoke the following:
+[![Gem Version](https://badge.fury.io/rb/desviar.png)](http://badge.fury.io/rb/desviar) Invoke the following:
 
     sudo apt-get install -y make g++ libsqlite3-dev ruby-dev
     sudo gem install desviar
