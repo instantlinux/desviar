@@ -27,7 +27,7 @@ Clone this repo and perform the following:
     git clone https://github.com/instantlinux/desviar.git
     cd desviar
     cp config/config.rb.example config/config.rb
-    sudo apt-get install -y make libsqlite3-dev ruby-dev
+    sudo apt-get install -y make g++ libsqlite3-dev ruby-dev
     #  package names above may differ if not using Ubuntu
     sudo gem install bundler
     sudo bundle install
@@ -37,7 +37,7 @@ Clone this repo and perform the following:
 ##### From rubygems.org #####
 Invoke the following:
 
-    sudo apt-get install -y make libsqlite3-dev ruby-dev
+    sudo apt-get install -y make g++ libsqlite3-dev ruby-dev
     sudo gem install desviar
     wget https://raw.github.com/instantlinux/desviar/master/config.ru
     wget https://raw.github.com/instantlinux/desviar/master/config/config.rb.example
