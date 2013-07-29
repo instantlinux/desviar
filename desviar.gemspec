@@ -41,6 +41,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "rack-recaptcha", ">= 0.6"
   spec.add_dependency "rack-test", ">= 0.6"
   spec.add_dependency "sinatra", ">= 1.4"
+  spec.add_dependency "sinatra-contrib", ">= 1.4"
   spec.add_dependency "syntaxi", ">= 0.5"
   spec.add_dependency "yajl-ruby", ">= 1.1"
 end

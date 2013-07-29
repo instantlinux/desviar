@@ -64,9 +64,7 @@ Here's an example of creating a new link via _curl_:
      --data "redir_uri=http://localhost/test&expiration=1800&captcha=1&notes=testing"
 
 Security notes:
-Consider moving the default database location from /dev/shm/desviar, and set its permissions to 0600.
-
-You can modify config.ru to direct log output to a different file.
+Consider moving the default database location from /dev/shm/desviar, and set its permissions to 0600. You can modify config.ru to direct log output to a different file.
 
 #### Features implemented ####
 
