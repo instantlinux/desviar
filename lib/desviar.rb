@@ -204,6 +204,7 @@ module Desviar
     def self.new(*)
   #   TODO: htpasswd parsing
   #   Desviar::Auth::authenticate!
+  #   @auth.call()
       app = Rack::Auth::Digest::MD5.new(super) do |username|
         {$config[:adminuser] => $config[:adminpw]}[username]
       end
@@ -211,6 +212,22 @@ module Desviar
       app.opaque = $config[:authsalt]
       app
     end
+
+=begin
+  class Mytest
+    def initialize(app)
+#      Desviar::Public::log "Initializing auth from .htpasswd"
+      @obj = Rack::Auth::Basic.new(app) do |username, password|
+        unless File.exist?('../config/.htpasswd')
+          raise PasswordFileNotFound.new("#{file} is not found. Please create it with htpasswd")
+        end
+        htpasswd = WEBrick::HTTPAuth::Htpasswd.new(file)
+        crypted = htpasswd.get_passwd(nil, user, false)
+        crypted == pass.crypt(crypted) if crypted
+      end
+    end
+  end
+=end
 
   end
 

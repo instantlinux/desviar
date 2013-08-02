@@ -10,11 +10,16 @@ call or for a remote user to click a direct link to fetch a specific
 item from its hidden source without presenting credentials.
 
 It operates similarly to TinyURL or the Amazon S3 temporary-URI
-feature: provide the tool with the URI to an existing secure resource,
-specify a number of seconds you want to authorize references to it,
-and you'll get back a temporary URI good for that amount of time.
+feature: provide the tool with the URI and credentials to an existing
+secure resource, specify a number of seconds you want to authorize
+references to it, and you'll get back a temporary URI good for that
+amount of time.  An analogy is the inexpensive key-card issued by a
+hotel's desk clerk: to access secure content in the room, you first
+need to present your credit-card credentials; your room key is all you
+need thereafter, at least until the key expires.  The hotel remains
+secure even if you keep the key after checkout.
 
-You can set it up on a DMZ network or in the cloud behind an
+You can set up desviar on a DMZ network or in the cloud behind an
 iptables/nginx configuration to provide whatever ACL restrictions you
 want, and you can reference any source URI (not just those stored on
 S3 or an equivalent service).
@@ -53,7 +58,7 @@ Clone this repo and perform the following:
 
 #### Usage ####
 
-Default credential of [app](http://localhost:4567) is user _desviar_, pw _password_.  
+In your browser, the [app](http://localhost:4567)'s default credential upon installation is user _desviar_, pw _password_.
 
 Commands:
 * /create - generate a new pre-authenticated URI
@@ -62,12 +67,7 @@ Commands:
 * /link/nnn - retrieve details
 * /config - set runtime configuration
 
-For scripting, the list, link and config commands can be modified with a _/json_ suffix (e.g. _/config/json_) to generate json instead of html output.
-
-Here's an example of creating a new link via _curl_:
-
-    curl --digest --user desviar:password http://localhost:4567/create \
-     --data "redir_uri=http://localhost/test&expiration=1800&captcha=1&notes=testing"
+For scripting, the list, link and config commands can be modified with a _/json_ suffix (e.g. _/config/json_) to generate json instead of html output.  Script examples for Ruby and bash are provided in the [examples directory](https://github.com/instantlinux/desviar/tree/master/lib).
 
 Security notes:
 Consider moving the default database location from /dev/shm/desviar, and set its permissions to 0600. You can modify config.ru to direct log output to a different file.

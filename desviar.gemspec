@@ -38,6 +38,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "dm-timestamps", ">= 1.2"
   spec.add_dependency "dm-validations", ">= 1.2"
   spec.add_dependency "multi_json", ">= 1.7"
+  spec.add_dependency "net-http-digest_auth", ">= 1.4"
   spec.add_dependency "rack-recaptcha", ">= 0.6"
   spec.add_dependency "rack-test", ">= 0.6"
   spec.add_dependency "sinatra", ">= 1.4"

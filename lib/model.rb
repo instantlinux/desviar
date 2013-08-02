@@ -10,6 +10,9 @@
 
 module Desviar
   module Model
+    ##
+    # Data model for Desviar main object
+
     class Main
     include DataMapper::Resource
   

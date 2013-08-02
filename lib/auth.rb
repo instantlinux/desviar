@@ -3,7 +3,8 @@ require 'webrick/httpauth/htpasswd'
 module Desviar::Auth
 
     def self.htpasswd
-      @htpasswd ||= Htpasswd.new(git.path_to("htpasswd"))
+#      @htpasswd ||= Htpasswd.new(git.path_to("htpasswd"))
+      @htpasswd ||= Htpasswd.new('.htpasswd')
     end
 
     def self.authentication
@@ -26,7 +27,8 @@ module Desviar::Auth
       end
     end
 
-    def self.unauthorized!(realm = Desviar::info)
+#    def self.unauthorized!(realm = Desviar::info)
+    def self.unauthorized!(realm = 'desviar-realm')
       headers "WWW-Authenticate" => %(Basic realm="#{realm}")
       throw :halt, [ 401, "Authorization Required" ]
     end
