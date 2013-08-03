@@ -75,8 +75,17 @@ module Desviar
       http.use_ssl = params[:redir_uri].index('https') == 0
       http.verify_mode = OpenSSL::SSL::VERIFY_NONE
       req = Net::HTTP::Get.new(object.request_uri)
-      req.basic_auth params[:remoteuser], params[:remotepw] if params[:remoteuser] != ''
-      response = http.request(req)
+      if params[:remoteuser] != ''
+        req.basic_auth params[:remoteuser], params[:remotepw]
+      end
+      begin
+        response = http.request(req)
+      rescue Errno::ECONNREFUSED
+        error 401
+      end
+      if response.code.to_i != 200
+        error response.code.to_i 
+      end
       if !$config[:dbencrypt]
         @desviar[:content] = response.body[0, $config[:contentmax]]
       else

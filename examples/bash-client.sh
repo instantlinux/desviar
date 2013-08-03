@@ -16,11 +16,29 @@
 #  Adjust credentials below if you've modified the server
 #  Invoke this program ./bash-client.sh
 
-curl --digest --user desviar:password http://localhost:4567/create \
-     --data "redir_uri=http://rubygems.com/gems/desviar&expiration=1800&captcha=1&notes=testing"
-echo
 echo "========= Desviar::Client config =========="
-curl --digest --user desviar:password http://localhost:4567/config/json
+curl --digest --user desviar:password -q http://localhost:4567/config/json
+echo
+echo "========= Desviar::Client create =========="
+#  In this example, create an item valid for 5 seconds and another valid for
+#  10 minutes to demonstrate cleanup after 6 seconds.  The notes field is
+#  an arbitrary payload which can be used for whatever tracking purposes
+#  your application requires.
+id=`curl -q --digest --user desviar:password http://localhost:4567/create \
+     --data "redir_uri=https://rubygems.org/gems/desviar&expiration=5&captcha=1&notes=tracking-item" \
+   --location |grep ID:|egrep -o [0-9]+`
+curl --digest --user desviar:password -q http://localhost:4567/link/json/$id
+echo
+id=`curl -q --digest --user desviar:password http://localhost:4567/create \
+     --data "redir_uri=https://rubygems.org/gems/desviar&expiration=600&notes=item%202" \
+   --location |grep ID:|egrep -o [0-9]+`
+curl --digest --user desviar:password -q http://localhost:4567/link/json/$id
 echo
 echo "========= Desviar::Client list ============"
-curl --digest --user desviar:password http://localhost:4567/list/json
+curl --digest --user desviar:password -q http://localhost:4567/list/json
+echo
+echo "========= Desviar::Client clean ============"
+sleep 6
+curl --digest --user desviar:password -q http://localhost:4567/clean
+curl --digest --user desviar:password -q http://localhost:4567/list/json
+echo

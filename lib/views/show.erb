@@ -1,13 +1,14 @@
 <div class="desviar">
   <a href="/desviar/<%= @desviar.temp_uri[0, @desviar.temp_uri.length - $config[:urisuffix].length] %>">
-  https:<%= settings.bind %>:<%= settings.port %>/desviar/<%= @desviar.temp_uri[0, @desviar.temp_uri.length - $config[:urisuffix].length] %></a><br><hr>
+  http://<%= settings.bind %>:<%= settings.port %>/desviar/<%= @desviar.temp_uri[0, @desviar.temp_uri.length - $config[:urisuffix].length] %></a><br><hr>
   <h2><a href="<%= @desviar.redir_uri %>"><%= @desviar.redir_uri %></a></h2>
   <div class="sbody" id="box">
      <%= @desviar.formatted_notes %>
   </div>
   <div class="sdate">
-     Created <%= @desviar.created_at.strftime("%D at %T %Z") %> <%= ENV['REMOTE_USER'] %><br>
-     Expires <%= @desviar.expires_at.strftime("%D at %T %Z") %>
+     Created <%= @desviar.created_at.strftime("%D at %T %Z") %><br>
+     Expires <%= @desviar.expires_at.strftime("%D at %T %Z") %><br>
+     ID: <%= @desviar.id %>
      <%= @desviar.captcha ? "<br>CAPTCHA is required" : "" %>
   </div>
   <hr>

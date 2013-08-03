@@ -67,14 +67,14 @@ Commands:
 * /link/nnn - retrieve details
 * /config - set runtime configuration
 
-For scripting, the list, link and config commands can be modified with a _/json_ suffix (e.g. _/config/json_) to generate json instead of html output.  Script examples for Ruby and bash are provided in the [examples directory](https://github.com/instantlinux/desviar/tree/master/lib).
+For scripting, the list, link and config commands can be modified with a _/json_ suffix (e.g. _/config/json_) to generate json instead of html output.  Script examples for Ruby and bash are provided in the [examples directory](https://github.com/instantlinux/desviar/tree/master/examples).
 
 Security notes:
 Consider moving the default database location from /dev/shm/desviar, and set its permissions to 0600. You can modify config.ru to direct log output to a different file.
 
 #### Features implemented ####
 
-- [x] HTTP digest authentication for user interface
+- [x] HTTP digest authentication for client API and user interface
 - [ ] Parse htpasswd files to support multiple credentials
 - [x] Bypass authentication for generated URIs
 - [x] Basic HTTP authentication for remote URIs
