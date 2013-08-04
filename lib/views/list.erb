@@ -1,10 +1,42 @@
 <div class="desviar">
 <h2>URI Listing (<%= @count %> of <%= @total %>)</h2>
  <table class="grid">
- <tr><th>id</th><th>created_at</th><th>expires_at</th><th>redir_uri</th><th>c</th><th>size</th><th>notes</th></tr>
- <% @desviar.each do |item| %>
- <%= "<tr><td><a href=/link/#{item.id}>#{item.id}</a></td><td>#{item.created_at}</td><td>#{item.expires_at}</td><td>#{item.redir_uri}</td><td>#{'&bull;' if item.captcha}</td><td>#{item.content.bytesize}</td><td>#{item.notes[0,50]}</td>" %>
- <% end %>
+<%=
+ cols = [ 'id', 'created_at', 'expires_at', 'redir_uri', 'captcha', 'size', 'owner', 'notes' ]
+ html = ""
+ html << "<tr>"
+ cols.each do |col| html << "<th>#{col}</th>" end
+ html << "</tr>"
+ @desviar.each do |item|
+   html << "<tr>"
+   cols.each do |col|
+     html << "<td>"
+     case col
+       when 'id'
+         if item['expires_at'] < DateTime.now
+           html << item[col].to_s
+         else
+           html << "<a href=/link/#{item[col]}>#{item[col].to_s}</a>"
+         end
+       when 'expires_at'
+         if item['expires_at'] < DateTime.now 
+           html << "<del>#{item[col].to_s}</del>"
+         else
+           html << item[col].to_s
+         end
+       when 'captcha'
+         html << (item[col] ? "<center>&bull;</center>" : "")
+       when 'size'
+         html << item['content'].bytesize.to_s
+       else
+         html << item[col].to_s[0..50]
+     end
+     html << "</td>"
+   end
+   html << "</tr>"
+ end
+ html
+%>
  </table>
 <p><a href="/create">Create</a> <a href="/config">Config</a> <a href="/clean">Clean</a>
 <hr>

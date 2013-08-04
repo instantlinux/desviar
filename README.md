@@ -72,10 +72,14 @@ For scripting, the list, link and config commands can be modified with a _/json_
 Security notes:
 Consider moving the default database location from /dev/shm/desviar, and set its permissions to 0600. You can modify config.ru to direct log output to a different file.
 
+User credentials:
+A file called users.rb is part of this package (see https://raw.github.com/instantlinux/desviar/master/config/users.rb); you can customize the list and define environment variable DESVIAR_USERS with the pathname of your customized file.  The configuration parameter _adminuser_ defines a "super-user" which can view/set configuration at run-time, and can access records other than its own via the list and link commands.
+
 #### Features implemented ####
 
 - [x] HTTP digest authentication for client API and user interface
-- [ ] Parse htpasswd files to support multiple credentials
+- [ ] Parse htpasswd files
+- [x] Multiple credentials, with designated _adminuser_
 - [x] Bypass authentication for generated URIs
 - [x] Basic HTTP authentication for remote URIs
 - [ ] HTTP digest authentication for remote URIs

@@ -30,6 +30,11 @@ if ENV['DESVIAR_CONFIG']
 else
   require File.expand_path '../../config/config', __FILE__
 end
+if ENV['DESVIAR_USERS']
+  require ENV['DESVIAR_USERS']
+else
+  require File.expand_path '../../config/users', __FILE__
+end
 require File.expand_path '../version', __FILE__
 require File.expand_path '../encrypt', __FILE__
 require File.expand_path '../model', __FILE__
@@ -66,7 +71,8 @@ module Desviar
       @desviar = Desviar::Model::Main.new(params.merge({
         :temp_uri => "#{$config[:uriprefix]}#{SecureRandom.urlsafe_base64($config[:hashlength])[0,$config[:hashlength]]}#{$config[:urisuffix]}",
         :expires_at     => Time.now + params[:expiration].to_i,
-        :captcha_validated => false
+        :captcha_validated => false,
+        :owner => request.env['REMOTE_USER']
       }).delete_if {|key, val| key == "redir_uri" || key == "remoteuser" || key == "remotepw"})
 
       # Cache the remote URI
@@ -100,7 +106,7 @@ module Desviar
 
       # Insert the new record and display the new link
       if @desviar.save
-        Desviar::Public::log "Created #{@desviar.id} #{@desviar.redir_uri} #{@desviar.expires_at} #{request.ip}"
+        Desviar::Public::log "Created #{@desviar.id} #{@desviar.redir_uri} #{@desviar.expires_at} #{request.ip} #{request.env['REMOTE_USER']}"
         redirect "/link/#{@desviar.id}"
       else
         error 400
@@ -110,7 +116,9 @@ module Desviar
     # show link ID
     get '/link/:id' do
       @desviar = Desviar::Model::Main.get(params[:id])
-      if @desviar && DateTime.now < @desviar[:expires_at]
+      if @desviar && DateTime.now < @desviar[:expires_at] &&
+        (request.env['REMOTE_USER'] == $config[:adminuser] ||
+         request.env['REMOTE_USER'] == @desviar['owner'])
         erb :show
       else
         error 404
@@ -120,7 +128,9 @@ module Desviar
     # show link info - json format
     get '/link/json/:id' do
       @desviar = Desviar::Model::Main.get(params[:id])
-      if @desviar && DateTime.now < @desviar[:expires_at]
+      if @desviar && DateTime.now < @desviar[:expires_at] &&
+        (request.env['REMOTE_USER'] == $config[:adminuser] ||
+         request.env['REMOTE_USER'] == @desviar['owner'])
         json @desviar.attributes.delete_if {|key, val| key == :content || key == :cipher_iv || key == :hmac}
       else
         error 404
@@ -134,21 +144,25 @@ module Desviar
       @desviar = DataMapper.repository(:default).adapter
       @records = Desviar::Model::Main.all(:expires_at.lt => DateTime.now,
                                           :fields => [ :id ])
-      Desviar::Public::log "debug cleanup found #{@records.length}"
       count = @records.length
       @records.each do |item|
         @desviar.execute("DELETE FROM desviar_model_mains WHERE id=#{item.id};")
       end
-      Desviar::Public::log "Cleaned #{count} records" if count != 0
+      Desviar::Public::log "Cleaned #{count} records by #{request.env['REMOTE_USER']}" if count != 0
       redirect "/list"
     end
 
     # list of most recent records
     get '/list' do
-      @desviar = Desviar::Model::Main.all(
+      query = {
          :limit => $config[:recordsmax],
          :order => [ :created_at.desc ],
-         :fields => [ :id, :created_at, :expires_at, :redir_uri, :captcha, :notes ])
+         :fields => [ :id, :created_at, :expires_at, :redir_uri, :captcha, :notes ]
+      }
+      if request.env['REMOTE_USER'] != $config[:adminuser]
+        query[:owner] = request.env['REMOTE_USER']
+      end
+      @desviar = Desviar::Model::Main.all(query)
       @total = @desviar.length
       @count = [ @total, $config[:recordsmax] ].min
       erb :list
@@ -156,11 +170,15 @@ module Desviar
 
     # list - json
     get '/list/json' do
-      @desviar = Desviar::Model::Main.all(
+      query = {
          :limit => $config[:recordsmax],
          :order => [ :created_at.desc ],
-         :fields => [ :id, :redir_uri, :temp_uri, :expiration, :captcha,
-                      :notes, :owner, :created_at, :expires_at ])
+         :fields => [ :id, :created_at, :expires_at, :redir_uri, :captcha, :notes ]
+      }
+      if request.env['REMOTE_USER'] != $config[:adminuser]
+        query[:owner] = request.env['REMOTE_USER']
+      end
+      @desviar = Desviar::Model::Main.all(query)
       list = Array.new
       @desviar.each do |item|
         list << {
@@ -175,39 +193,51 @@ module Desviar
 
     # configuration
     get '/config' do
-      erb :config
+      if request.env['REMOTE_USER'] == $config[:adminuser]
+        erb :config
+      else
+        error 404
+      end
     end
 
     # configuration - json
     get '/config/json' do
-      json $config.reject { |opt, val| 
+      if request.env['REMOTE_USER'] == $config[:adminuser]
+        json $config.reject { |opt, val| 
           opt.to_s.index('msg_') == 0 ||
           $config[:hidden].include?(opt.to_s) ||
           $config[:hashed].include?(opt.to_s)
-      }
+        }
+      else
+        error 404
+      end
     end
 
     # submit
     post '/config' do
-      params['config'].each do |opt, val|
-        if $config[opt.to_sym].class == Fixnum
-          $config[opt.to_sym] = val.to_i
-        elsif val != "" || !$config[:hashed].include?(opt)
-          $config[opt.to_sym] = case val
-            when "true" then true
-            when "false" then false
-            when "nil" then nil
-            else val
-            end
+      if request.env['REMOTE_USER'] == $config[:adminuser]
+        params['config'].each do |opt, val|
+          if $config[opt.to_sym].class == Fixnum
+            $config[opt.to_sym] = val.to_i
+          elsif val != "" || !$config[:hashed].include?(opt)
+            $config[opt.to_sym] = case val
+              when "true" then true
+              when "false" then false
+              when "nil" then nil
+              else val
+              end
+          end
         end
+ 
+        DataMapper::Logger.new($stdout, :debug) if $config[:debug]
+        $config[:cryptkey] = SecureRandom.base64(32) if $config[:cryptkey].nil?
+
+        puts $config.inspect if $config[:debug]
+        Desviar::Public::log "Configuration updated by #{request.env['REMOTE_USER']}"
+        redirect "/list"
+      else
+        error 404
       end
-
-      DataMapper::Logger.new($stdout, :debug) if $config[:debug]
-      $config[:cryptkey] = SecureRandom.base64(32) if $config[:cryptkey].nil?
-
-      puts $config.inspect if $config[:debug]
-      Desviar::Public::log "Configuration updated"
-      redirect "/list"
     end
 
     def self.new(*)
@@ -215,7 +245,7 @@ module Desviar
   #   Desviar::Auth::authenticate!
   #   @auth.call()
       app = Rack::Auth::Digest::MD5.new(super) do |username|
-        {$config[:adminuser] => $config[:adminpw]}[username]
+        $users[username]
       end
       app.realm  = $config[:authprompt]
       app.opaque = $config[:authsalt]
