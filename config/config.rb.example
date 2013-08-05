@@ -29,7 +29,7 @@ $config = {
 :redir_retain => "keep",
 
     :msg_authprompt => "AuthPrompt appears as the realm in the browser authentication dialog",
-:authprompt => "Please Authenticate",
+:authprompt => "desviar_user@instantlinux.net",
 
     :msg_adminuser => "Administrative username - has access to all records",
 :adminuser => "desviar",
