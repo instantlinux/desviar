@@ -29,6 +29,7 @@ module Desviar
     property :cipher_iv,  Binary, :length => 16
     property :hmac,       String, :length => 46
     property :owner,      String, :length => 16
+    property :num_uses,   Integer
     property :created_at, DateTime
     property :updated_at, DateTime
     property :expires_at, DateTime

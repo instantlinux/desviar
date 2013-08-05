@@ -9,8 +9,9 @@
      Created <%= @desviar.created_at.strftime("%D at %T %Z") %><br>
      Expires <%= @desviar.expires_at.strftime("%D at %T %Z") %><br>
      ID: <%= @desviar.id %>
+     <%= if @desviar.num_uses > 0 then "<br>Uses: #{@desviar.num_uses}" end %>
      <%= @desviar.captcha ? "<br>CAPTCHA is required" : "" %>
   </div>
   <hr>
-  <a href="/create">Create new temporary URI!</a>
+  <a href="/create">Create Another</a> <a href="/list">List</a>
 </div>

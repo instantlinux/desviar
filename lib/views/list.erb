@@ -2,7 +2,7 @@
 <h2>URI Listing (<%= @count %> of <%= @total %>)</h2>
  <table class="grid">
 <%=
- cols = [ 'id', 'created_at', 'expires_at', 'redir_uri', 'captcha', 'size', 'owner', 'notes' ]
+ cols = [ 'id', 'created_at', 'expires_at', 'num_uses', 'redir_uri', 'captcha', 'size', 'owner', 'notes' ]
  html = ""
  html << "<tr>"
  cols.each do |col| html << "<th>#{col}</th>" end
@@ -13,13 +13,13 @@
      html << "<td>"
      case col
        when 'id'
-         if item['expires_at'] < DateTime.now
+         if item['expires_at'] < DateTime.now || item['num_uses'] == 0
            html << item[col].to_s
          else
            html << "<a href=/link/#{item[col]}>#{item[col].to_s}</a>"
          end
        when 'expires_at'
-         if item['expires_at'] < DateTime.now 
+         if item['expires_at'] < DateTime.now || item['num_uses'] == 0
            html << "<del>#{item[col].to_s}</del>"
          else
            html << item[col].to_s
@@ -38,6 +38,8 @@
  html
 %>
  </table>
-<p><a href="/create">Create</a> <a href="/config">Config</a> <a href="/clean">Clean</a>
+<p><a href="/create">Create</a> 
+  <% if request.env['REMOTE_USER'] == $config[:adminuser] %><a href="/config">Config</a> <% end %>
+  <a href="/clean">Clean</a>
 <hr>
 </div>

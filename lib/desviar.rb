@@ -20,7 +20,6 @@ require 'dm-timestamps'
 require 'syntaxi'
 require 'syslog'
 require 'net/http'
-#require 'test/unit'
 require 'rack/test'
 require 'rack/recaptcha'
 require 'multi_json'
@@ -30,18 +29,79 @@ if ENV['DESVIAR_CONFIG']
 else
   require File.expand_path '../../config/config', __FILE__
 end
-if ENV['DESVIAR_USERS']
-  require ENV['DESVIAR_USERS']
-else
-  require File.expand_path '../../config/users', __FILE__
-end
 require File.expand_path '../version', __FILE__
 require File.expand_path '../encrypt', __FILE__
 require File.expand_path '../model', __FILE__
-# Auth parsing is work-in-progress
-# require File.expand_path '../auth', __FILE__
+require File.expand_path '../auth', __FILE__
+$digest_file = ENV['DESVIAR_HTDIGEST'] || (File.expand_path '../../config/.htdigest', __FILE__)
 
 module Desviar
+
+  #############################################
+  # Class Desviar::Public - routes without auth
+
+  class Public < Sinatra::Base
+
+    configure do
+      use Rack::Recaptcha, :public_key => $config[:captchapub], :private_key => $config[:captchapriv]
+      helpers Rack::Recaptcha::Helpers
+    end
+
+    # display content
+    get '/:temp_uri' do
+      @desviar = Desviar::Model::Main.first(:temp_uri => params[:temp_uri])
+      cache_control :public, :max_age => 30
+      if @desviar && DateTime.now < @desviar[:expires_at] && @desviar[:num_uses] !=0
+        if @desviar[:captcha] && !@desviar[:captcha_validated]
+          @button = @desviar[:captcha_button]
+          erb :captcha
+        else
+          @desviar.update(:captcha_validated => false) if @desviar[:captcha_validated]
+          if !$config[:dbencrypt]
+            @content = @desviar[:content]
+          else
+            obj = Desviar::EncryptedItem::Decryptor::for({
+                'cipher'         => $config[:dbencrypt], 
+                'version'        => 2, 
+                'encrypted_data' => @desviar[:content],
+                'iv'             => Base64.encode64(@desviar[:cipher_iv]),
+                'hmac'           => @desviar[:hmac]}, $config[:cryptkey])
+            @content = obj.for_decrypted_item
+          end
+          if @desviar[:num_uses] > 0
+            @desviar.update(:num_uses => @desviar[:num_uses] - 1)
+          end
+          Desviar::Public::log "Fetched #{@desviar.id} #{@desviar.redir_uri} #{@desviar.content.bytesize} #{@desviar.notes[0,50]}"
+          erb :content, :layout => false
+        end
+      else
+        error 404
+      end
+    end
+
+    # handle reCAPTCHA
+    post '/:temp_uri' do
+      if recaptcha_valid?
+        @desviar = Desviar::Model::Main.first(
+                       :temp_uri => params[:temp_uri],
+                       :fields => [ :id, :temp_uri, :captcha_validated ])
+        @desviar.update(:captcha_validated => true)
+      end
+      redirect "/desviar/#{params[:temp_uri]}"
+    end
+
+    # Syslog utility
+    def self.log(message, priority = Syslog::LOG_INFO)
+      if $config[:log_facility]    
+        Syslog.open($0, Syslog::LOG_PID | Syslog::LOG_CONS | $config[:log_facility]) { |obj| obj.info message }
+      end
+      puts "#{Time.now} #{message}" if $config[:debug]
+    end
+  end
+
+  #############################################
+  # Class Desviar::Authorized - routes (commands) which require authorization
+
   class Authorized < Sinatra::Base
 
     configure do
@@ -50,19 +110,21 @@ module Desviar
       DataMapper.auto_upgrade! if DataMapper.respond_to?(:auto_upgrade!)
       $config[:cryptkey] = SecureRandom.base64(32) if $config[:cryptkey].nil?
       helpers Sinatra::JSON
+      @auth = Desviar::Auth.new($digest_file, $config[:adminuser], $config[:authprompt], $config[:authsalt])
+      Desviar::Public::log "Starting #{Desviar.info}"
     end
 
     get '/' do
       redirect '/create'
     end
   
-    # create
+    # form: new temporary URI
     get '/create' do
       puts request.env.inspect if $config[:debug]
       erb :create
     end
   
-    # submit
+    # create new temporary URI
     post '/create' do
       error 400 if params[:redir_uri].strip == ""
 
@@ -102,18 +164,24 @@ module Desviar
         @desviar[:cipher_iv] = obj.iv
       end
 
+      # Apply field rules:
+      #  - Discard redir_uri from data record if redir_retain != 'keep'
+      #  - Set num_uses to -1 (unlimited) if not set
       @desviar[:redir_uri] = $config[:redir_retain] == "keep" ? params[:redir_uri] : ""
+      if @params[:num_uses].to_i <= 0 || @params[:num_uses].empty?
+        @desviar[:num_uses] = -1
+      end
 
       # Insert the new record and display the new link
       if @desviar.save
-        Desviar::Public::log "Created #{@desviar.id} #{@desviar.redir_uri} #{@desviar.expires_at} #{request.ip} #{request.env['REMOTE_USER']}"
+        Desviar::Public::log "Created #{@desviar.id} #{@desviar.redir_uri} #{@desviar.expires_at} #{@desviar.num_uses} #{request.ip} #{request.env['REMOTE_USER']}"
         redirect "/link/#{@desviar.id}"
       else
         error 400
       end
     end
   
-    # show link ID
+    # show link metadata info
     get '/link/:id' do
       @desviar = Desviar::Model::Main.get(params[:id])
       if @desviar && DateTime.now < @desviar[:expires_at] &&
@@ -142,8 +210,14 @@ module Desviar
       # TODO: figure out the clean "native" way of DataMapper::Collection.destroy
       #   - but this works fine for small databases
       @desviar = DataMapper.repository(:default).adapter
-      @records = Desviar::Model::Main.all(:expires_at.lt => DateTime.now,
-                                          :fields => [ :id ])
+      query = {
+         :expires_at.lt => DateTime.now,
+         :fields => [ :id ]
+      }
+      if request.env['REMOTE_USER'] != $config[:adminuser]
+        query[:owner] = request.env['REMOTE_USER']
+      end
+      @records = Desviar::Model::Main.all(query)
       count = @records.length
       @records.each do |item|
         @desviar.execute("DELETE FROM desviar_model_mains WHERE id=#{item.id};")
@@ -152,7 +226,7 @@ module Desviar
       redirect "/list"
     end
 
-    # list of most recent records
+    # list most recent records
     get '/list' do
       query = {
          :limit => $config[:recordsmax],
@@ -191,8 +265,9 @@ module Desviar
       json list
     end
 
-    # configuration
+    # form - configuration
     get '/config' do
+      @ver = Desviar.info
       if request.env['REMOTE_USER'] == $config[:adminuser]
         erb :config
       else
@@ -200,7 +275,7 @@ module Desviar
       end
     end
 
-    # configuration - json
+    # query configuration - json
     get '/config/json' do
       if request.env['REMOTE_USER'] == $config[:adminuser]
         json $config.reject { |opt, val| 
@@ -213,7 +288,7 @@ module Desviar
       end
     end
 
-    # submit
+    # config update
     post '/config' do
       if request.env['REMOTE_USER'] == $config[:adminuser]
         params['config'].each do |opt, val|
@@ -241,106 +316,12 @@ module Desviar
     end
 
     def self.new(*)
-  #   TODO: htpasswd parsing
-  #   Desviar::Auth::authenticate!
-  #   @auth.call()
-      app = Rack::Auth::Digest::MD5.new(super) do |username|
-        $users[username]
-      end
-      app.realm  = $config[:authprompt]
-      app.opaque = $config[:authsalt]
+      app = @auth.authenticate!(super)
+#     TODO - scope of request.env is needed
+#     user = request.env['REMOTE_USER']
+      Desviar::Public::log "Authenticated new user session"
       app
     end
-
-=begin
-  class Mytest
-    def initialize(app)
-#      Desviar::Public::log "Initializing auth from .htpasswd"
-      @obj = Rack::Auth::Basic.new(app) do |username, password|
-        unless File.exist?('../config/.htpasswd')
-          raise PasswordFileNotFound.new("#{file} is not found. Please create it with htpasswd")
-        end
-        htpasswd = WEBrick::HTTPAuth::Htpasswd.new(file)
-        crypted = htpasswd.get_passwd(nil, user, false)
-        crypted == pass.crypt(crypted) if crypted
-      end
-    end
   end
-=end
-
-  end
-
-  #############################################
-  # Class Desviar::Public - routes without auth
-
-  class Public < Sinatra::Base
-
-    configure do
-      use Rack::Recaptcha, :public_key => $config[:captchapub], :private_key => $config[:captchapriv]
-      helpers Rack::Recaptcha::Helpers
-    end
-
-    # display content
-    get '/:temp_uri' do
-      @desviar = Desviar::Model::Main.first(:temp_uri => params[:temp_uri])
-      cache_control :public, :max_age => 30
-      if @desviar && DateTime.now < @desviar[:expires_at]
-        if @desviar[:captcha] && !@desviar[:captcha_validated]
-          @button = @desviar[:captcha_button]
-          erb :captcha
-        else
-          @desviar.update(:captcha_validated => false) if @desviar[:captcha_validated]
-          if !$config[:dbencrypt]
-            @content = @desviar[:content]
-          else
-            obj = Desviar::EncryptedItem::Decryptor::for({
-                'cipher'         => $config[:dbencrypt], 
-                'version'        => 2, 
-                'encrypted_data' => @desviar[:content],
-                'iv'             => Base64.encode64(@desviar[:cipher_iv]),
-                'hmac'           => @desviar[:hmac]}, $config[:cryptkey])
-            @content = obj.for_decrypted_item
-          end
-          Desviar::Public::log "Fetched #{@desviar.id} #{@desviar.redir_uri} #{@desviar.content.bytesize} #{@desviar.notes[0,50]}"
-          erb :content, :layout => false
-        end
-      else
-        error 404
-      end
-    end
-
-    # handle reCAPTCHA
-    post '/:temp_uri' do
-      if recaptcha_valid?
-        @desviar = Desviar::Model::Main.first(:temp_uri => params[:temp_uri],
-                                       :fields => [ :id, :temp_uri, :captcha_validated ])
-        @desviar.update(:captcha_validated => true)
-      end
-      redirect "/desviar/#{params[:temp_uri]}"
-    end
-
-    def self.log(message, priority = Syslog::LOG_INFO)
-      if $config[:log_facility]    
-        Syslog.open($0, Syslog::LOG_PID | Syslog::LOG_CONS | $config[:log_facility]) { |obj| obj.info message }
-      end
-      puts "#{Time.now} #{message}" if $config[:debug]
-    end
-  end
-
-=begin
-  # TODO - switch to MiniTest, move to test subdir
-  class Test <Test::Unit::TestCase
-    include Rack::Test::Methods
-
-    def app
-      Desviar
-    end
- 
-    def test_list
-      get '/list'
-      assert last_response.ok?
-    end
-  end
-=end
 end
 

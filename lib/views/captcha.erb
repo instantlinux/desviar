@@ -2,7 +2,11 @@
 <%= @desviar.captcha_prompt %>
 <hr>
   <form action="/desviar/<%= @desviar.temp_uri %>" method="POST">
-    <%= recaptcha_tag(:challenge) %>
+    <%= if $config[:captchapub].empty? 
+         "<b>Configuration error</b>: CAPTCHA required but no key is set -- get one at <a href='http://www.google.com/recaptcha/whyrecaptcha'>Google signup</a>"
+        else
+          recaptcha_tag(:challenge)
+        end %>
     <input type="submit" value="<%= @button %>"/>
   </form>
 </div>

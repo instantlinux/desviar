@@ -51,7 +51,8 @@ puts obj.fetch link['temp_uri']
 
 # Example 3: valid for 10 minutes 
 pp obj.create "https://rubygems.org/gems/desviar", 600, {
-   "notes"  => "example 3" }
+   :num_uses => 10,
+   :notes    => "example 3" }
 
 puts "========= Desviar::Client list ============"
 pp obj.list

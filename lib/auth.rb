@@ -1,102 +1,53 @@
-require 'webrick/httpauth/htpasswd'
+# Authorization module for Desviar - RFC 2317 htdigest support
+#
+#   Copyright 2013 Richard Braun
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
 
-module Desviar::Auth
-
-    def self.htpasswd
-#      @htpasswd ||= Htpasswd.new(git.path_to("htpasswd"))
-      @htpasswd ||= Htpasswd.new('.htpasswd')
-    end
-
-    def self.authentication
-      @authentication ||= Rack::Auth::Basic::Request.new request.env
-    end
-
-    def self.authenticated?
-      request.env["REMOTE_USER"] && request.env["desviar.authenticated"]
-    end
-
-    def self.authenticate(username, password)
-      checked   = [ username, password ] == authentication.credentials
-      validated = authentication.provided? && authentication.basic?
-      granted   = htpasswd.authenticated? username, password
-      if checked and validated and granted
-        request.env["desviar.authenticated"] = true
-        request.env["REMOTE_USER"] = authentication.username
-      else
-        nil
+module Desviar
+  class Auth
+    def initialize(htdigest_file, adminuser, realm, authsalt)
+      @users = Hash.new
+      File.open(htdigest_file) do |f|
+        f.each_line do |line|
+          if line.split(':')[1] == realm
+            @users[line.split(':')[0]] = line.split(':')[2].strip
+          end
+        end
       end
+      @realm     = realm
+      @adminuser = adminuser
+      @authsalt  = authsalt
     end
 
-#    def self.unauthorized!(realm = Desviar::info)
-    def self.unauthorized!(realm = 'desviar-realm')
-      headers "WWW-Authenticate" => %(Basic realm="#{realm}")
-      throw :halt, [ 401, "Authorization Required" ]
+    def authenticate!(app)
+      auth = Rack::Auth::Digest::MD5.new(app) do |username|
+        @users[username]
+      end
+      auth.realm  = @realm
+      auth.opaque = @authsalt
+      auth.passwords_hashed = true
+      auth
     end
 
-    def self.bad_request!
-      throw :halt, [ 400, "Bad Request" ]
+=begin
+    # TODO: figure out how to access Rack::Request environment
+    def authorized?(owner)
+      request.env['REMOTE_USER'] == @adminuser ||
+            request.env['REMOTE_USER'] == owner
     end
 
-    def self.authenticate!
-      return if authenticated?
-      unauthorized! unless authentication.provided?
-      bad_request!  unless authentication.basic?
-      unauthorized! unless authenticate(*authentication.credentials)
-      request.env["REMOTE_USER"] = authentication.username
+    def authsuper?
+      request.env['REMOTE_USER'] == @adminuser
     end
 
-    def self.access_granted?(username, password)
-      authenticated? || authenticate(username, password)
+    def user_name
+      request.env['REMOTE_USER']
     end
-
+=end
+  end
 end
-
-class Desviar::Auth2
-
-      def initialize(file)
-        @handler = WEBrick::HTTPAuth::Htpasswd.new(file)
-        yield self if block_given?
-      end
-
-      def find(username)
-        password = @handler.get_passwd(nil, username, false)
-        if block_given?
-          yield password ? [password, password[0,2]] : [nil, nil]
-        else
-          password
-        end
-      end
-
-      def authenticated?(username, password)
-        self.find username do |crypted, salt|
-          crypted && salt && crypted == password.crypt(salt)
-        end
-      end
-
-      def create(username, password)
-        @handler.set_passwd(nil, username, password)
-      end
-      alias update create
-
-      def destroy(username)
-        @handler.delete_passwd(nil, username)
-      end
-
-      def include?(username)
-        users.include? username
-      end
-
-      def size
-        users.size
-      end
-
-      def write!
-        @handler.flush
-      end
-
-      private
-
-      def users
-        @handler.each{|username, password| username }
-      end
-    end

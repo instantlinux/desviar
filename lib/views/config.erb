@@ -2,6 +2,7 @@
   <h2>Run-time configuration</h2>
   <hr>
   <form action="/config" method="POST">
+  <font size=-1 color='DarkSlateGray'><%= @ver %> Copyright &copy; 2013 Rich Braun <a href='http://www.apache.org/licenses/LICENSE-2.0'>Apache 2.0</a></font>
     <p>
 <%=
    values = $config.select { |key, val| !$config[:hidden].include?(key.to_s) &&

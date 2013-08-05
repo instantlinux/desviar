@@ -1,7 +1,7 @@
 module Desviar
   VERSION = "0.0.17"
-  RELEASE = "2013-08-03"
-  TIMESTAMP = "2013-08-03 18:38:27 -07:00"
+  RELEASE = "2013-08-04"
+  TIMESTAMP = "2013-08-04 21:02:33 -07:00"
 
   def self.info
       "#{name} v#{VERSION} (#{RELEASE})"

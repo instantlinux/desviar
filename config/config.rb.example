@@ -28,14 +28,11 @@ $config = {
     :msg_redir_retain => "Retention policy for URI - discard before saving db entry to be more secure",
 :redir_retain => "keep",
 
-    :msg_authprompt => "AuthPrompt appears in the browser authentication dialog",
+    :msg_authprompt => "AuthPrompt appears as the realm in the browser authentication dialog",
 :authprompt => "Please Authenticate",
 
     :msg_adminuser => "Administrative username - has access to all records",
 :adminuser => "desviar",
-
-    :msg_adminpw => "Admin PW secures the UI",
-:adminpw => "password",
 
     :msg_authsalt => "AuthSalt is used to randomize http-digest hash",
 :authsalt => "notveryrandom",
@@ -70,7 +67,7 @@ $config = {
 :hidden => [ "hidden", "hashed" ],
 
     # Hashed config items - secure passwords
-:hashed => [ "authsalt", "adminpw", "cryptkey", "captchapriv" ],
+:hashed => [ "authsalt", "cryptkey", "captchapriv" ],
 
     :msg_debug => "Debug mode",
 :debug => false
